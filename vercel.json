@@ -19,7 +19,11 @@
     { "src": "/restaurants(.*)", "dest": "backend/server.js" },
     { "src": "/deals(/?.*)", "dest": "backend/server.js" },
     { "src": "/cuisines/([^/]+)", "dest": "backend/server.js" },
+    { "src": "/assets/(.*)", "dest": "/frontend/assets/$1" },
+    { "src": "/manifest.json", "dest": "/frontend/manifest.json" },
+    { "src": "/favicon.ico", "dest": "/frontend/favicon.ico" },
+    { "src": "/robots.txt", "dest": "/frontend/robots.txt" },
     { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
+    { "src": "/(.*)", "dest": "/frontend/index.html" }
   ]
 }
