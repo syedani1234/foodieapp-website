@@ -1,16 +1,28 @@
 ﻿import React, { useState, useEffect } from "react";
-import { useCart } from "../context/CartContext.js";
-import { useFavorites } from "../context/FavoritesContext.js";
-import { formatImageUrl } from "../utils/formatImageUrl.js";
+import { useCart } from "../context/CartContext";
+import { useFavorites } from "../context/FavoritesContext";
+import { formatImageUrl } from "../utils/formatImageUrl";
 
-export default function MenuModal({ item, onClose, onAddToCart, isEditing = false, editIndex = null }) {
+export default function MenuModal({
+  item,
+  onClose,
+  onAddToCart,
+  isEditing = false,
+  editIndex = null,
+}) {
   const { addToCart, updateCartItem } = useCart();
   const { isFavorite, addToFavorites, removeFromFavorites } = useFavorites();
 
   // Check if this is a deal/combo item
-  const isDealItem = item.isDeal || item.isCombo || item.dealOptions || item.variationGroups?.some(g => 
-    g.name.toLowerCase().includes('deal') || g.name.toLowerCase().includes('combo')
-  );
+  const isDealItem =
+    item.isDeal ||
+    item.isCombo ||
+    item.dealOptions ||
+    item.variationGroups?.some(
+      (g) =>
+        g.name.toLowerCase().includes("deal") ||
+        g.name.toLowerCase().includes("combo"),
+    );
 
   // State for regular items
   const [selectedSize, setSelectedSize] = useState("medium");
@@ -18,11 +30,11 @@ export default function MenuModal({ item, onClose, onAddToCart, isEditing = fals
   const [selectedToppings, setSelectedToppings] = useState([]);
   const [selectedAddOns, setSelectedAddOns] = useState([]);
   const [selectedVariations, setSelectedVariations] = useState({});
-  
+
   // State for deal items
   const [selectedDealOptions, setSelectedDealOptions] = useState({});
   const [selectedDealSize, setSelectedDealSize] = useState(null);
-  
+
   const [quantity, setQuantity] = useState(1);
   const [isFav, setIsFav] = useState(false);
   const [totalPrice, setTotalPrice] = useState(0);
@@ -32,12 +44,12 @@ export default function MenuModal({ item, onClose, onAddToCart, isEditing = fals
     // Initialize state from item if editing
     if (isEditing && item) {
       setQuantity(item.quantity || 1);
-      
+
       if (isDealItem) {
         // For deal items
         setSelectedDealOptions(item.selectedDealOptions || {});
         setSelectedDealSize(item.selectedSize || null);
-        
+
         // Parse deal variations if they exist in selectedVariations
         if (item.selectedVariations) {
           setSelectedVariations(item.selectedVariations);
@@ -54,15 +66,17 @@ export default function MenuModal({ item, onClose, onAddToCart, isEditing = fals
       // For new items, set defaults
       if (isDealItem) {
         // Set default deal size if available
-        const sizeGroup = item.variationGroups?.find(g => 
-          g.name.toLowerCase().includes('size') || g.name.toLowerCase().includes('deal')
+        const sizeGroup = item.variationGroups?.find(
+          (g) =>
+            g.name.toLowerCase().includes("size") ||
+            g.name.toLowerCase().includes("deal"),
         );
         if (sizeGroup?.options?.[0]) {
           handleVariationChange(sizeGroup.id, sizeGroup.options[0]);
         }
       } else if (item.variationGroups?.length > 0) {
         // Select first variation by default for regular items
-        item.variationGroups.forEach(group => {
+        item.variationGroups.forEach((group) => {
           if (group.options?.[0] && group.required) {
             handleVariationChange(group.id, group.options[0]);
           }
@@ -72,7 +86,7 @@ export default function MenuModal({ item, onClose, onAddToCart, isEditing = fals
 
     // Check if item is in favorites
     setIsFav(isFavorite(item.id));
-    
+
     // Calculate initial price
     calculatePrices();
   }, [item, isEditing, isDealItem]);
@@ -81,18 +95,36 @@ export default function MenuModal({ item, onClose, onAddToCart, isEditing = fals
   useEffect(() => {
     calculatePrices();
   }, [
-    selectedSize, selectedCrust, selectedToppings, selectedAddOns, 
-    selectedVariations, selectedDealOptions, selectedDealSize, quantity
+    selectedSize,
+    selectedCrust,
+    selectedToppings,
+    selectedAddOns,
+    selectedVariations,
+    selectedDealOptions,
+    selectedDealSize,
+    quantity,
   ]);
 
   // Helper: get price of an object based on selected size
   const getPriceBySize = (obj) => {
     if (!obj) return 0;
-    if (selectedSize === "small" || selectedSize === "250ml" || selectedSize === "regular") 
+    if (
+      selectedSize === "small" ||
+      selectedSize === "250ml" ||
+      selectedSize === "regular"
+    )
       return Number(obj.price_small ?? obj.price ?? 0);
-    if (selectedSize === "medium" || selectedSize === "500ml" || selectedSize === "large") 
+    if (
+      selectedSize === "medium" ||
+      selectedSize === "500ml" ||
+      selectedSize === "large"
+    )
       return Number(obj.price_medium ?? obj.price ?? 0);
-    if (selectedSize === "large" || selectedSize === "1l" || selectedSize === "xl") 
+    if (
+      selectedSize === "large" ||
+      selectedSize === "1l" ||
+      selectedSize === "xl"
+    )
       return Number(obj.price_large ?? obj.price ?? 0);
     return Number(obj.price ?? 0);
   };
@@ -104,22 +136,22 @@ export default function MenuModal({ item, onClose, onAddToCart, isEditing = fals
 
     if (isDealItem) {
       // Deal item pricing
-      
+
       // Base deal price
       const dealVariations = Object.values(selectedVariations);
-      dealVariations.forEach(variation => {
+      dealVariations.forEach((variation) => {
         extrasPrice += Number(variation?.price || 0);
       });
 
       // Deal options
-      Object.values(selectedDealOptions).forEach(option => {
+      Object.values(selectedDealOptions).forEach((option) => {
         extrasPrice += Number(option?.price || 0);
       });
     } else {
       // Regular item pricing
-      
+
       // Size/variation price
-      Object.values(selectedVariations).forEach(variation => {
+      Object.values(selectedVariations).forEach((variation) => {
         extrasPrice += Number(variation?.price || 0);
       });
 
@@ -127,12 +159,12 @@ export default function MenuModal({ item, onClose, onAddToCart, isEditing = fals
       extrasPrice += getPriceBySize(selectedCrust);
 
       // Toppings
-      selectedToppings.forEach(topping => {
+      selectedToppings.forEach((topping) => {
         extrasPrice += getPriceBySize(topping);
       });
 
       // Add-Ons
-      selectedAddOns.forEach(addOn => {
+      selectedAddOns.forEach((addOn) => {
         extrasPrice += Number(addOn.price || 0);
       });
     }
@@ -142,7 +174,7 @@ export default function MenuModal({ item, onClose, onAddToCart, isEditing = fals
 
     setPricePerUnit(unitPrice);
     setTotalPrice(total);
-    
+
     return { unitPrice, total };
   };
 
@@ -167,37 +199,62 @@ export default function MenuModal({ item, onClose, onAddToCart, isEditing = fals
   const handleVariationChange = (groupId, option) => {
     const newVariations = { ...selectedVariations, [groupId]: option };
     setSelectedVariations(newVariations);
-    
+
     // Update size for deal items
     if (isDealItem) {
-      const label = option.label?.toLowerCase() || '';
-      if (label.includes("small") || label.includes("250ml") || label.includes("regular")) {
+      const label = option.label?.toLowerCase() || "";
+      if (
+        label.includes("small") ||
+        label.includes("250ml") ||
+        label.includes("regular")
+      ) {
         setSelectedSize("small");
         setSelectedDealSize("small");
-      } else if (label.includes("medium") || label.includes("500ml") || label.includes("large")) {
+      } else if (
+        label.includes("medium") ||
+        label.includes("500ml") ||
+        label.includes("large")
+      ) {
         setSelectedSize("medium");
         setSelectedDealSize("medium");
-      } else if (label.includes("large") || label.includes("1l") || label.includes("xl") || label.includes("family")) {
+      } else if (
+        label.includes("large") ||
+        label.includes("1l") ||
+        label.includes("xl") ||
+        label.includes("family")
+      ) {
         setSelectedSize("large");
         setSelectedDealSize("large");
       }
     } else {
       // For regular items
-      const label = option.label?.toLowerCase() || '';
-      if (label.includes("small") || label.includes("250ml") || label.includes("regular")) {
+      const label = option.label?.toLowerCase() || "";
+      if (
+        label.includes("small") ||
+        label.includes("250ml") ||
+        label.includes("regular")
+      ) {
         setSelectedSize("small");
-      } else if (label.includes("medium") || label.includes("500ml") || label.includes("large")) {
+      } else if (
+        label.includes("medium") ||
+        label.includes("500ml") ||
+        label.includes("large")
+      ) {
         setSelectedSize("medium");
-      } else if (label.includes("large") || label.includes("1l") || label.includes("xl")) {
+      } else if (
+        label.includes("large") ||
+        label.includes("1l") ||
+        label.includes("xl")
+      ) {
         setSelectedSize("large");
       }
     }
   };
 
   const handleDealOptionChange = (optionId, option) => {
-    setSelectedDealOptions(prev => ({
+    setSelectedDealOptions((prev) => ({
       ...prev,
-      [optionId]: option
+      [optionId]: option,
     }));
   };
 
@@ -207,8 +264,8 @@ export default function MenuModal({ item, onClose, onAddToCart, isEditing = fals
     } else {
       addToFavorites({
         ...item,
-        type: 'dish',
-        restaurantId: item.restaurant_id || item.restaurantId
+        type: "dish",
+        restaurantId: item.restaurant_id || item.restaurantId,
       });
     }
     setIsFav(!isFav);
@@ -226,7 +283,7 @@ export default function MenuModal({ item, onClose, onAddToCart, isEditing = fals
       selectedDealOptions: isDealItem ? selectedDealOptions : {},
       itemTotal: totalPrice,
       pricePerUnit: pricePerUnit,
-      updatedAt: Date.now() // Force re-render in cart
+      updatedAt: Date.now(), // Force re-render in cart
     };
 
     if (onAddToCart) {
@@ -241,19 +298,19 @@ export default function MenuModal({ item, onClose, onAddToCart, isEditing = fals
   };
 
   const handleIncrementQuantity = () => {
-    setQuantity(prev => prev + 1);
+    setQuantity((prev) => prev + 1);
   };
 
   const handleDecrementQuantity = () => {
-    setQuantity(prev => Math.max(1, prev - 1));
+    setQuantity((prev) => Math.max(1, prev - 1));
   };
 
   // Check if required variations are selected
   const checkRequiredSelections = () => {
     if (!item.variationGroups) return true;
-    
-    const requiredGroups = item.variationGroups.filter(g => g.required);
-    return requiredGroups.every(group => selectedVariations[group.id]);
+
+    const requiredGroups = item.variationGroups.filter((g) => g.required);
+    return requiredGroups.every((group) => selectedVariations[group.id]);
   };
 
   const canAddToCart = checkRequiredSelections();
@@ -264,45 +321,46 @@ export default function MenuModal({ item, onClose, onAddToCart, isEditing = fals
         {/* Header with image */}
         <div className="relative">
           {item.image && (
-            <img 
-              src={formatImageUrl(item.image)} 
-              alt={item.name} 
+            <img
+              src={formatImageUrl(item.image)}
+              alt={item.name}
               className="w-full h-64 object-cover"
               onError={(e) => {
                 e.target.src = "/images/placeholder.jpg";
               }}
             />
           )}
-          
+
           {/* Close button */}
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             className="absolute top-4 right-4 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center text-gray-700 hover:bg-white hover:text-red-500 transition-all shadow-lg"
           >
             <span className="text-xl font-bold">Ã—</span>
           </button>
-          
+
           {/* Favorite button */}
-          <button 
+          <button
             onClick={handleFavoriteToggle}
             className="absolute top-4 left-4 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-all"
           >
-            <span className="text-xl">
-              {isFav ? 'â¤ï¸' : 'ðŸ¤'}
-            </span>
+            <span className="text-xl">{isFav ? "â¤ï¸" : "ðŸ¤"}</span>
           </button>
         </div>
 
         <div className="p-6">
           {/* Item info */}
           <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">{item.name}</h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">
+              {item.name}
+            </h2>
             <div className="flex items-center justify-between">
               <p className="text-gray-600 text-sm">
                 {isDealItem ? "Combo Deal" : item.category_name}
               </p>
               <span className="text-lg font-bold text-green-600">
-                {isDealItem ? "Deal" : "Base"}: Rs. {Number(item.base_price || item.price || 0).toFixed(0)}
+                {isDealItem ? "Deal" : "Base"}: Rs.{" "}
+                {Number(item.base_price || item.price || 0).toFixed(0)}
               </span>
             </div>
           </div>
@@ -315,103 +373,117 @@ export default function MenuModal({ item, onClose, onAddToCart, isEditing = fals
           )}
 
           {/* Deal Variations - Only for deal items */}
-          {isDealItem && item.variationGroups?.map((g) => (
-            <div key={g.id} className="mb-6">
-              <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
-                {g.name} 
-                {g.required && <span className="text-red-500 ml-1">*</span>}
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {g.options.map((o) => {
-                  const isSelected = selectedVariations[g.id]?.id === o.id;
-                  return (
-                    <button
-                      key={o.id}
-                      className={`px-4 py-3 rounded-xl border-2 transition-all duration-200 ${
-                        isSelected 
-                          ? "bg-pink-50 border-pink-500 text-pink-700" 
-                          : "bg-white border-gray-200 text-gray-700 hover:border-pink-300"
-                      }`}
-                      onClick={() => handleVariationChange(g.id, o)}
-                    >
-                      <div className="font-medium text-left">{o.label}</div>
-                      {o.price > 0 && (
-                        <div className="text-sm font-semibold text-pink-600 mt-1">
-                          +Rs. {Number(o.price).toFixed(0)}
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
+          {isDealItem &&
+            item.variationGroups?.map((g) => (
+              <div key={g.id} className="mb-6">
+                <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
+                  {g.name}
+                  {g.required && <span className="text-red-500 ml-1">*</span>}
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {g.options.map((o) => {
+                    const isSelected = selectedVariations[g.id]?.id === o.id;
+                    return (
+                      <button
+                        key={o.id}
+                        className={`px-4 py-3 rounded-xl border-2 transition-all duration-200 ${
+                          isSelected
+                            ? "bg-pink-50 border-pink-500 text-pink-700"
+                            : "bg-white border-gray-200 text-gray-700 hover:border-pink-300"
+                        }`}
+                        onClick={() => handleVariationChange(g.id, o)}
+                      >
+                        <div className="font-medium text-left">{o.label}</div>
+                        {o.price > 0 && (
+                          <div className="text-sm font-semibold text-pink-600 mt-1">
+                            +Rs. {Number(o.price).toFixed(0)}
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
 
           {/* Regular Item Variations */}
-          {!isDealItem && item.variationGroups?.map((g) => (
-            <div key={g.id} className="mb-6">
-              <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
-                {g.name} 
-                {g.required && <span className="text-red-500 ml-1">*</span>}
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {g.options.map((o) => {
-                  const isSelected = selectedVariations[g.id]?.id === o.id;
-                  return (
-                    <button
-                      key={o.id}
-                      className={`px-4 py-3 rounded-xl border-2 transition-all duration-200 ${
-                        isSelected 
-                          ? "bg-green-50 border-green-500 text-green-700" 
-                          : "bg-white border-gray-200 text-gray-700 hover:border-green-300"
-                      }`}
-                      onClick={() => handleVariationChange(g.id, o)}
-                    >
-                      <div className="font-medium text-left">{o.label}</div>
-                      {o.price > 0 && (
-                        <div className="text-sm font-semibold text-green-600 mt-1">
-                          +Rs. {Number(o.price).toFixed(0)}
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
+          {!isDealItem &&
+            item.variationGroups?.map((g) => (
+              <div key={g.id} className="mb-6">
+                <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
+                  {g.name}
+                  {g.required && <span className="text-red-500 ml-1">*</span>}
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {g.options.map((o) => {
+                    const isSelected = selectedVariations[g.id]?.id === o.id;
+                    return (
+                      <button
+                        key={o.id}
+                        className={`px-4 py-3 rounded-xl border-2 transition-all duration-200 ${
+                          isSelected
+                            ? "bg-green-50 border-green-500 text-green-700"
+                            : "bg-white border-gray-200 text-gray-700 hover:border-green-300"
+                        }`}
+                        onClick={() => handleVariationChange(g.id, o)}
+                      >
+                        <div className="font-medium text-left">{o.label}</div>
+                        {o.price > 0 && (
+                          <div className="text-sm font-semibold text-green-600 mt-1">
+                            +Rs. {Number(o.price).toFixed(0)}
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
 
           {/* Deal Options - Only for deal items */}
-          {isDealItem && item.dealOptions?.map((optionGroup) => (
-            <div key={optionGroup.id} className="mb-6">
-              <h3 className="font-semibold text-gray-800 mb-3">
-                {optionGroup.name} {optionGroup.required && <span className="text-red-500">*</span>}
-              </h3>
-              <div className="space-y-2">
-                {optionGroup.options.map((option) => {
-                  const isSelected = selectedDealOptions[optionGroup.id]?.id === option.id;
-                  return (
-                    <label key={option.id} className="flex items-center p-4 border border-gray-200 rounded-xl hover:bg-gray-50 cursor-pointer transition">
-                      <input 
-                        type="radio" 
-                        name={optionGroup.id}
-                        checked={isSelected}
-                        onChange={() => handleDealOptionChange(optionGroup.id, option)}
-                        className="mr-3 h-5 w-5 text-pink-600 focus:ring-pink-500"
-                      />
-                      <div className="flex-1 flex justify-between items-center">
-                        <span className="font-medium text-gray-800">{option.name}</span>
-                        {option.price > 0 && (
-                          <span className="font-semibold text-pink-600">
-                            + Rs. {Number(option.price).toFixed(0)}
+          {isDealItem &&
+            item.dealOptions?.map((optionGroup) => (
+              <div key={optionGroup.id} className="mb-6">
+                <h3 className="font-semibold text-gray-800 mb-3">
+                  {optionGroup.name}{" "}
+                  {optionGroup.required && (
+                    <span className="text-red-500">*</span>
+                  )}
+                </h3>
+                <div className="space-y-2">
+                  {optionGroup.options.map((option) => {
+                    const isSelected =
+                      selectedDealOptions[optionGroup.id]?.id === option.id;
+                    return (
+                      <label
+                        key={option.id}
+                        className="flex items-center p-4 border border-gray-200 rounded-xl hover:bg-gray-50 cursor-pointer transition"
+                      >
+                        <input
+                          type="radio"
+                          name={optionGroup.id}
+                          checked={isSelected}
+                          onChange={() =>
+                            handleDealOptionChange(optionGroup.id, option)
+                          }
+                          className="mr-3 h-5 w-5 text-pink-600 focus:ring-pink-500"
+                        />
+                        <div className="flex-1 flex justify-between items-center">
+                          <span className="font-medium text-gray-800">
+                            {option.name}
                           </span>
-                        )}
-                      </div>
-                    </label>
-                  );
-                })}
+                          {option.price > 0 && (
+                            <span className="font-semibold text-pink-600">
+                              + Rs. {Number(option.price).toFixed(0)}
+                            </span>
+                          )}
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
 
           {/* Crusts - Only for regular pizza items (not deals) */}
           {!isDealItem && item.crusts?.length > 0 && (
@@ -419,16 +491,21 @@ export default function MenuModal({ item, onClose, onAddToCart, isEditing = fals
               <h3 className="font-semibold text-gray-800 mb-3">Crust</h3>
               <div className="space-y-2">
                 {item.crusts.map((c) => (
-                  <label key={c.id} className="flex items-center p-4 border border-gray-200 rounded-xl hover:bg-gray-50 cursor-pointer transition">
-                    <input 
-                      type="radio" 
-                      name="crust" 
-                      checked={selectedCrust?.id === c.id} 
+                  <label
+                    key={c.id}
+                    className="flex items-center p-4 border border-gray-200 rounded-xl hover:bg-gray-50 cursor-pointer transition"
+                  >
+                    <input
+                      type="radio"
+                      name="crust"
+                      checked={selectedCrust?.id === c.id}
                       onChange={() => setSelectedCrust(c)}
                       className="mr-3 h-5 w-5 text-green-600 focus:ring-green-500"
                     />
                     <div className="flex-1 flex justify-between items-center">
-                      <span className="font-medium text-gray-800">{c.name}</span>
+                      <span className="font-medium text-gray-800">
+                        {c.name}
+                      </span>
                       <span className="font-semibold text-green-600">
                         + Rs. {getPriceBySize(c).toFixed(0)}
                       </span>
@@ -445,17 +522,24 @@ export default function MenuModal({ item, onClose, onAddToCart, isEditing = fals
               <h3 className="font-semibold text-gray-800 mb-3">Toppings</h3>
               <div className="space-y-2">
                 {item.toppings.map((t) => {
-                  const isSelected = selectedToppings.find((x) => x.id === t.id);
+                  const isSelected = selectedToppings.find(
+                    (x) => x.id === t.id,
+                  );
                   return (
-                    <label key={t.id} className="flex items-center p-4 border border-gray-200 rounded-xl hover:bg-gray-50 cursor-pointer transition">
-                      <input 
-                        type="checkbox" 
-                        checked={!!isSelected} 
+                    <label
+                      key={t.id}
+                      className="flex items-center p-4 border border-gray-200 rounded-xl hover:bg-gray-50 cursor-pointer transition"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={!!isSelected}
                         onChange={() => toggleTopping(t)}
                         className="mr-3 h-5 w-5 text-green-600 rounded focus:ring-green-500"
                       />
                       <div className="flex-1 flex justify-between items-center">
-                        <span className="font-medium text-gray-800">{t.name}</span>
+                        <span className="font-medium text-gray-800">
+                          {t.name}
+                        </span>
                         <span className="font-semibold text-green-600">
                           + Rs. {getPriceBySize(t).toFixed(0)}
                         </span>
@@ -475,15 +559,20 @@ export default function MenuModal({ item, onClose, onAddToCart, isEditing = fals
                 {item.addOns.map((a) => {
                   const isSelected = selectedAddOns.find((x) => x.id === a.id);
                   return (
-                    <label key={a.id} className="flex items-center p-4 border border-gray-200 rounded-xl hover:bg-gray-50 cursor-pointer transition">
-                      <input 
-                        type="checkbox" 
-                        checked={!!isSelected} 
+                    <label
+                      key={a.id}
+                      className="flex items-center p-4 border border-gray-200 rounded-xl hover:bg-gray-50 cursor-pointer transition"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={!!isSelected}
                         onChange={() => toggleAddOn(a)}
                         className="mr-3 h-5 w-5 text-green-600 rounded focus:ring-green-500"
                       />
                       <div className="flex-1 flex justify-between items-center">
-                        <span className="font-medium text-gray-800">{a.name}</span>
+                        <span className="font-medium text-gray-800">
+                          {a.name}
+                        </span>
                         <span className="font-semibold text-green-600">
                           + Rs. {Number(a.price || 0).toFixed(0)}
                         </span>
@@ -500,7 +589,7 @@ export default function MenuModal({ item, onClose, onAddToCart, isEditing = fals
             <div className="flex items-center justify-between mb-4">
               <span className="font-semibold text-gray-700">Quantity:</span>
               <div className="flex items-center gap-4">
-                <button 
+                <button
                   onClick={handleDecrementQuantity}
                   disabled={quantity <= 1}
                   className="w-10 h-10 flex items-center justify-center bg-white border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
@@ -510,7 +599,7 @@ export default function MenuModal({ item, onClose, onAddToCart, isEditing = fals
                 <span className="text-2xl font-bold text-gray-800 min-w-[2rem] text-center">
                   {quantity}
                 </span>
-                <button 
+                <button
                   onClick={handleIncrementQuantity}
                   className="w-10 h-10 flex items-center justify-center bg-white border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100 transition"
                 >
@@ -523,19 +612,24 @@ export default function MenuModal({ item, onClose, onAddToCart, isEditing = fals
             <div className="mb-4 p-4 bg-white rounded-lg border border-gray-200">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-gray-600">Base Price:</span>
-                <span className="font-medium">Rs. {Number(item.base_price || item.price || 0).toFixed(0)}</span>
+                <span className="font-medium">
+                  Rs. {Number(item.base_price || item.price || 0).toFixed(0)}
+                </span>
               </div>
-              
+
               {/* Extras Summary */}
-              {(pricePerUnit > Number(item.base_price || item.price || 0)) && (
+              {pricePerUnit > Number(item.base_price || item.price || 0) && (
                 <div className="flex justify-between items-center text-sm text-gray-600 mb-2">
                   <span>Extras & Modifications:</span>
                   <span className="text-green-600 font-medium">
-                    +Rs. {(pricePerUnit - Number(item.base_price || item.price || 0)).toFixed(0)}
+                    +Rs.{" "}
+                    {(
+                      pricePerUnit - Number(item.base_price || item.price || 0)
+                    ).toFixed(0)}
                   </span>
                 </div>
               )}
-              
+
               <div className="flex justify-between items-center text-lg font-bold text-gray-800">
                 <span>Price per item:</span>
                 <span>Rs. {pricePerUnit.toFixed(0)}</span>
@@ -554,12 +648,12 @@ export default function MenuModal({ item, onClose, onAddToCart, isEditing = fals
                     </div>
                   )}
                 </div>
-                <button 
+                <button
                   onClick={handleAddToCart}
                   disabled={!canAddToCart}
                   className={`px-8 py-3 rounded-lg font-bold transition-all duration-200 hover:scale-105 shadow-lg ${
                     canAddToCart
-                      ? isDealItem 
+                      ? isDealItem
                         ? "bg-pink-600 hover:bg-pink-700 text-white"
                         : "bg-green-600 hover:bg-green-700 text-white"
                       : "bg-gray-300 text-gray-500 cursor-not-allowed"
@@ -572,38 +666,50 @@ export default function MenuModal({ item, onClose, onAddToCart, isEditing = fals
           </div>
 
           {/* Selection Summary */}
-          {(selectedSize !== "medium" || Object.keys(selectedVariations).length > 0 || 
+          {(selectedSize !== "medium" ||
+            Object.keys(selectedVariations).length > 0 ||
             (isDealItem && Object.keys(selectedDealOptions).length > 0) ||
-            selectedToppings.length > 0 || selectedAddOns.length > 0 || selectedCrust) && (
+            selectedToppings.length > 0 ||
+            selectedAddOns.length > 0 ||
+            selectedCrust) && (
             <div className="text-sm text-gray-600 space-y-1 bg-gray-50 p-4 rounded-xl">
               <div className="font-medium mb-2">Your Selections:</div>
-              
+
               {/* Size */}
               {selectedSize && selectedSize !== "medium" && (
-                <div>â€¢ Size: {selectedSize.charAt(0).toUpperCase() + selectedSize.slice(1)}</div>
+                <div>
+                  â€¢ Size:{" "}
+                  {selectedSize.charAt(0).toUpperCase() + selectedSize.slice(1)}
+                </div>
               )}
-              
+
               {/* Variations */}
               {Object.values(selectedVariations).map((v, idx) => (
                 <div key={idx}>
-                  â€¢ {v.label}: {v.price > 0 ? `+Rs. ${v.price}` : 'Included'}
+                  â€¢ {v.label}: {v.price > 0 ? `+Rs. ${v.price}` : "Included"}
                 </div>
               ))}
-              
+
               {/* Deal Options */}
-              {isDealItem && Object.values(selectedDealOptions).map((opt, idx) => (
-                <div key={idx}>
-                  â€¢ {opt.name}: {opt.price > 0 ? `+Rs. ${opt.price}` : 'Included'}
-                </div>
-              ))}
-              
+              {isDealItem &&
+                Object.values(selectedDealOptions).map((opt, idx) => (
+                  <div key={idx}>
+                    â€¢ {opt.name}:{" "}
+                    {opt.price > 0 ? `+Rs. ${opt.price}` : "Included"}
+                  </div>
+                ))}
+
               {/* Regular item options */}
               {selectedCrust && <div>â€¢ Crust: {selectedCrust.name}</div>}
               {selectedToppings.length > 0 && (
-                <div>â€¢ Toppings: {selectedToppings.map(t => t.name).join(', ')}</div>
+                <div>
+                  â€¢ Toppings: {selectedToppings.map((t) => t.name).join(", ")}
+                </div>
               )}
               {selectedAddOns.length > 0 && (
-                <div>â€¢ Add-ons: {selectedAddOns.map(a => a.name).join(', ')}</div>
+                <div>
+                  â€¢ Add-ons: {selectedAddOns.map((a) => a.name).join(", ")}
+                </div>
               )}
             </div>
           )}
@@ -612,5 +718,3 @@ export default function MenuModal({ item, onClose, onAddToCart, isEditing = fals
     </div>
   );
 }
-
-
