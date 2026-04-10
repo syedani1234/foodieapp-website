@@ -16,9 +16,12 @@ export default function RestaurantList() {
   const fetchRestaurants = () => {
     setLoading(true);
     axios
-      .get(`${import.meta.env.VITE_API_URL || "http://localhost:4000"}/restaurants`, {
-        params: { q: search, _page: page, _limit: limit },
-      })
+      .get(
+        `${import.meta.env.VITE_API_URL || "http://localhost:4000"}/restaurants`,
+        {
+          params: { q: search, _page: page, _limit: limit },
+        },
+      )
       .then((res) => {
         setRestaurants(res.data);
         const total = res.headers["x-total-count"] || 0;
@@ -38,7 +41,9 @@ export default function RestaurantList() {
 
   return (
     <div className="max-w-6xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6 text-gray-800">ðŸ´ All Restaurants</h1>
+      <h1 className="text-3xl font-bold mb-6 text-gray-800">
+        ðŸ´ All Restaurants
+      </h1>
 
       {/* Search */}
       <div className="mb-6 flex justify-center">
@@ -73,35 +78,45 @@ export default function RestaurantList() {
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                   />
                   <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full">
-                    <span className="text-sm font-medium text-gray-800">{r.cuisine_name}</span>
+                    <span className="text-sm font-medium text-gray-800">
+                      {r.cuisine_name}
+                    </span>
                   </div>
                 </div>
               )}
-              
+
               {/* Restaurant Info */}
               <div className="p-5">
                 <div className="flex justify-between items-start mb-2">
-                  <h2 className="text-lg font-bold text-gray-800 truncate">{r.name}</h2>
+                  <h2 className="text-lg font-bold text-gray-800 truncate">
+                    {r.name}
+                  </h2>
                   {r.rating && (
                     <div className="flex items-center bg-yellow-50 px-2 py-1 rounded">
-                      <span className="text-yellow-500 text-sm font-bold">â˜… {r.rating}</span>
+                      <span className="text-yellow-500 text-sm font-bold">
+                        â˜… {r.rating}
+                      </span>
                     </div>
                   )}
                 </div>
-                
-                <p className="text-sm text-gray-600 mb-2 line-clamp-2">{r.description}</p>
-                
+
+                <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                  {r.description}
+                </p>
+
                 <div className="flex items-center text-sm text-gray-500 mb-3">
-                  <span className="mr-3">ðŸ“ {r.location || 'City location'}</span>
-                  {r.delivery_time && (
-                    <span>â±ï¸ {r.delivery_time} min</span>
-                  )}
+                  <span className="mr-3">
+                    ðŸ“ {r.location || "City location"}
+                  </span>
+                  {r.delivery_time && <span>â±ï¸ {r.delivery_time} min</span>}
                 </div>
-                
+
                 <div className="flex justify-between items-center">
                   <div className="text-gray-700">
                     {r.delivery_fee === 0 ? (
-                      <span className="text-green-600 font-medium">Free delivery</span>
+                      <span className="text-green-600 font-medium">
+                        Free delivery
+                      </span>
                     ) : (
                       <span>Delivery: Rs. {r.delivery_fee || 50}</span>
                     )}
@@ -149,5 +164,3 @@ export default function RestaurantList() {
     </div>
   );
 }
-
-
