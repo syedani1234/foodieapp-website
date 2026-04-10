@@ -1,4 +1,4 @@
-﻿import API_BASE_URL from "./config/api";
+﻿import API_BASE_URL from "../config/api";
 import { useCart } from "../context/CartContext";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";

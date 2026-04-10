@@ -1,9 +1,9 @@
-﻿import API_BASE_URL from './config/api'
+﻿import API_BASE_URL from "../config/api";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useFavorites } from "../context/FavoritesContext";
-import DealDialog from '../components/DealDialog'; // Add this import
+import DealDialog from "../components/DealDialog"; // Add this import
 import {
   Box,
   Container,
@@ -23,7 +23,7 @@ import {
   Paper,
   Badge,
   Checkbox,
-  Alert
+  Alert,
 } from "@mui/material";
 import {
   Search,
@@ -35,34 +35,34 @@ import {
   Restaurant,
   ErrorOutline,
   Refresh,
-  LocalOffer // Add this import
+  LocalOffer, // Add this import
 } from "@mui/icons-material";
 
 // API Configuration
-const API_BASE_URL = API_BASE_URL;
 const RESTAURANTS_ENDPOINT = `${API_BASE_URL}/restaurants`;
 
 // Helper function to ensure image URL is absolute
 const getImageUrl = (imagePath) => {
   if (!imagePath) return null;
   // If it's already a full URL, return as is
-  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+  if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
     return imagePath;
   }
   // Otherwise, prepend base URL if needed
-  if (imagePath.startsWith('/')) {
+  if (imagePath.startsWith("/")) {
     return `${API_BASE_URL}${imagePath}`;
   }
   return `${API_BASE_URL}/${imagePath}`;
 };
 
 // Default restaurant image
-const DEFAULT_RESTAURANT_IMAGE = "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60";
+const DEFAULT_RESTAURANT_IMAGE =
+  "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60";
 
 export default function RestaurantPage() {
   const navigate = useNavigate();
   const favoritesContext = useFavorites();
-  
+
   // Safely extract functions from context
   const addToFavorites = favoritesContext?.addToFavorites;
   const isFavorite = favoritesContext?.isFavorite;
@@ -81,83 +81,108 @@ export default function RestaurantPage() {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await axios.get(RESTAURANTS_ENDPOINT, {
         timeout: 10000,
         headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        }
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
       });
 
       console.log("API Response:", response.data);
 
       // Extract restaurants data from different response formats
       let restaurantsData = [];
-      
+
       if (response.data) {
         if (response.data.items && Array.isArray(response.data.items)) {
           restaurantsData = response.data.items;
         } else if (Array.isArray(response.data)) {
           restaurantsData = response.data;
-        } else if (response.data.restaurants && Array.isArray(response.data.restaurants)) {
+        } else if (
+          response.data.restaurants &&
+          Array.isArray(response.data.restaurants)
+        ) {
           restaurantsData = response.data.restaurants;
         }
       }
 
       // Transform data - INCLUDING IMAGE HANDLING
-      const transformedRestaurants = restaurantsData.map((restaurant, index) => {
-        // ALWAYS set menu as available
-        const hasMenu = true; // Force true
-        const menuUpdating = false; // Force false
-        
-        // Get image URL (from your backend's img() helper or direct path)
-        const imageUrl = restaurant.image || restaurant.image_url || null;
-        
-        // Safely parse rating - handle string or number
-        let rating = 4.0 + Math.random() * 1.0; // Default random rating 4.0-5.0
-        if (restaurant.rating !== undefined && restaurant.rating !== null) {
-          if (typeof restaurant.rating === 'string') {
-            rating = parseFloat(restaurant.rating) || rating;
-          } else if (typeof restaurant.rating === 'number') {
-            rating = restaurant.rating;
+      const transformedRestaurants = restaurantsData.map(
+        (restaurant, index) => {
+          // ALWAYS set menu as available
+          const hasMenu = true; // Force true
+          const menuUpdating = false; // Force false
+
+          // Get image URL (from your backend's img() helper or direct path)
+          const imageUrl = restaurant.image || restaurant.image_url || null;
+
+          // Safely parse rating - handle string or number
+          let rating = 4.0 + Math.random() * 1.0; // Default random rating 4.0-5.0
+          if (restaurant.rating !== undefined && restaurant.rating !== null) {
+            if (typeof restaurant.rating === "string") {
+              rating = parseFloat(restaurant.rating) || rating;
+            } else if (typeof restaurant.rating === "number") {
+              rating = restaurant.rating;
+            }
           }
-        }
-        
-        // Get deal count from API or random for demo
-        const dealCount = restaurant.deal_count || Math.floor(Math.random() * 5);
-        
-        return {
-          id: restaurant.id || restaurant._id || `restaurant-${index + 1}`,
-          name: restaurant.name || restaurant.restaurantName || `Restaurant ${index + 1}`,
-          cuisine: restaurant.cuisine_name || restaurant.cuisine || restaurant.category || "Fast Food",
-          location: restaurant.location || restaurant.address || restaurant.city || "456 Fast Lane, Snack Town",
-          delivery_time: restaurant.delivery_time || restaurant.deliveryTime || "30-45",
-          delivery_fee: restaurant.delivery_fee || restaurant.deliveryFee || 2.99,
-          is_open: restaurant.is_open !== false, // true by default unless explicitly false
-          has_menu: hasMenu,
-          menu_updating: menuUpdating,
-          menu_available: true, // Always true
-          menu_item_count: restaurant.menu_item_count || 0,
-          deal_count: dealCount, // Add deal count
-          // Image handling
-          image: getImageUrl(imageUrl),
-          image_url: getImageUrl(imageUrl),
-          rating: rating // Safely parsed rating
-        };
-      });
+
+          // Get deal count from API or random for demo
+          const dealCount =
+            restaurant.deal_count || Math.floor(Math.random() * 5);
+
+          return {
+            id: restaurant.id || restaurant._id || `restaurant-${index + 1}`,
+            name:
+              restaurant.name ||
+              restaurant.restaurantName ||
+              `Restaurant ${index + 1}`,
+            cuisine:
+              restaurant.cuisine_name ||
+              restaurant.cuisine ||
+              restaurant.category ||
+              "Fast Food",
+            location:
+              restaurant.location ||
+              restaurant.address ||
+              restaurant.city ||
+              "456 Fast Lane, Snack Town",
+            delivery_time:
+              restaurant.delivery_time || restaurant.deliveryTime || "30-45",
+            delivery_fee:
+              restaurant.delivery_fee || restaurant.deliveryFee || 2.99,
+            is_open: restaurant.is_open !== false, // true by default unless explicitly false
+            has_menu: hasMenu,
+            menu_updating: menuUpdating,
+            menu_available: true, // Always true
+            menu_item_count: restaurant.menu_item_count || 0,
+            deal_count: dealCount, // Add deal count
+            // Image handling
+            image: getImageUrl(imageUrl),
+            image_url: getImageUrl(imageUrl),
+            rating: rating, // Safely parsed rating
+          };
+        },
+      );
 
       console.log("Transformed restaurants:", transformedRestaurants);
-      console.log("Restaurants with deals:", transformedRestaurants.filter(r => r.deal_count > 0).map(r => ({
-        name: r.name,
-        deal_count: r.deal_count
-      })));
-      
+      console.log(
+        "Restaurants with deals:",
+        transformedRestaurants
+          .filter((r) => r.deal_count > 0)
+          .map((r) => ({
+            name: r.name,
+            deal_count: r.deal_count,
+          })),
+      );
+
       setRestaurants(transformedRestaurants);
-      
     } catch (err) {
       console.error("Failed to fetch restaurants:", err.message);
-      setError("Unable to load restaurants. Please check if the backend server is running.");
+      setError(
+        "Unable to load restaurants. Please check if the backend server is running.",
+      );
       setRestaurants([]);
     } finally {
       setLoading(false);
@@ -172,7 +197,7 @@ export default function RestaurantPage() {
   // Extract unique cuisines for filtering
   const cuisines = useMemo(() => {
     const cuisineSet = new Set();
-    restaurants.forEach(restaurant => {
+    restaurants.forEach((restaurant) => {
       if (restaurant.cuisine && restaurant.cuisine.trim()) {
         cuisineSet.add(restaurant.cuisine.trim());
       }
@@ -190,18 +215,22 @@ export default function RestaurantPage() {
 
     // Filter by cuisine
     if (filteredCuisine) {
-      filtered = filtered.filter(restaurant => 
-        restaurant.cuisine?.toLowerCase().includes(filteredCuisine.toLowerCase())
+      filtered = filtered.filter((restaurant) =>
+        restaurant.cuisine
+          ?.toLowerCase()
+          .includes(filteredCuisine.toLowerCase()),
       );
     }
 
     // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter(restaurant => {
+      filtered = filtered.filter((restaurant) => {
         const nameMatch = restaurant.name?.toLowerCase().includes(query);
         const cuisineMatch = restaurant.cuisine?.toLowerCase().includes(query);
-        const locationMatch = restaurant.location?.toLowerCase().includes(query);
+        const locationMatch = restaurant.location
+          ?.toLowerCase()
+          .includes(query);
 
         return nameMatch || cuisineMatch || locationMatch;
       });
@@ -211,30 +240,36 @@ export default function RestaurantPage() {
   }, [restaurants, searchQuery, filteredCuisine]);
 
   // Handle favorite toggle
-  const handleFavoriteToggle = useCallback((restaurant) => {
-    if (addToFavorites && typeof addToFavorites === 'function') {
-      try {
-        addToFavorites({
-          id: restaurant.id,
-          name: restaurant.name,
-          type: 'restaurant',
-          data: restaurant
-        });
-      } catch (error) {
-        console.error("Error adding to favorites:", error);
+  const handleFavoriteToggle = useCallback(
+    (restaurant) => {
+      if (addToFavorites && typeof addToFavorites === "function") {
+        try {
+          addToFavorites({
+            id: restaurant.id,
+            name: restaurant.name,
+            type: "restaurant",
+            data: restaurant,
+          });
+        } catch (error) {
+          console.error("Error adding to favorites:", error);
+        }
+      } else {
+        console.warn("addToFavorites function not available");
       }
-    } else {
-      console.warn("addToFavorites function not available");
-    }
-  }, [addToFavorites]);
+    },
+    [addToFavorites],
+  );
 
   // Check if item is favorite (safe)
-  const checkIsFavorite = useCallback((restaurantId) => {
-    if (isFavorite && typeof isFavorite === 'function') {
-      return isFavorite(restaurantId);
-    }
-    return false;
-  }, [isFavorite]);
+  const checkIsFavorite = useCallback(
+    (restaurantId) => {
+      if (isFavorite && typeof isFavorite === "function") {
+        return isFavorite(restaurantId);
+      }
+      return false;
+    },
+    [isFavorite],
+  );
 
   // Clear all filters
   const clearFilters = useCallback(() => {
@@ -243,9 +278,12 @@ export default function RestaurantPage() {
   }, []);
 
   // Handle view restaurant details
-  const handleViewRestaurant = useCallback((restaurantId) => {
-    navigate(`/restaurants/${restaurantId}`);
-  }, [navigate]);
+  const handleViewRestaurant = useCallback(
+    (restaurantId) => {
+      navigate(`/restaurants/${restaurantId}`);
+    },
+    [navigate],
+  );
 
   // Add this function to handle deal selection
   const handleDealClick = useCallback((dealId) => {
@@ -256,26 +294,64 @@ export default function RestaurantPage() {
   // Loading skeleton
   if (loading) {
     return (
-      <Box sx={{ minHeight: '100vh', bgcolor: '#f5f5f5', py: 4 }}>
+      <Box sx={{ minHeight: "100vh", bgcolor: "#f5f5f5", py: 4 }}>
         <Container maxWidth="lg">
           <Skeleton variant="text" width={200} height={60} sx={{ mb: 4 }} />
-          <Skeleton variant="rectangular" height={56} sx={{ mb: 3, borderRadius: 2 }} />
-          
+          <Skeleton
+            variant="rectangular"
+            height={56}
+            sx={{ mb: 3, borderRadius: 2 }}
+          />
+
           <Grid container spacing={3}>
             {[1, 2].map((i) => (
               <Grid item xs={12} key={i}>
                 <Card sx={{ borderRadius: 2 }}>
                   {/* Image skeleton */}
-                  <Skeleton variant="rectangular" height={180} sx={{ width: '100%' }} />
+                  <Skeleton
+                    variant="rectangular"
+                    height={180}
+                    sx={{ width: "100%" }}
+                  />
                   <CardContent sx={{ p: 3 }}>
                     <Skeleton variant="text" height={40} sx={{ mb: 2 }} />
-                    <Skeleton variant="text" width="40%" height={30} sx={{ mb: 2 }} />
-                    <Skeleton variant="text" width="60%" height={20} sx={{ mb: 1 }} />
-                    <Skeleton variant="text" width="50%" height={20} sx={{ mb: 1 }} />
-                    <Skeleton variant="text" width="40%" height={20} sx={{ mb: 3 }} />
+                    <Skeleton
+                      variant="text"
+                      width="40%"
+                      height={30}
+                      sx={{ mb: 2 }}
+                    />
+                    <Skeleton
+                      variant="text"
+                      width="60%"
+                      height={20}
+                      sx={{ mb: 1 }}
+                    />
+                    <Skeleton
+                      variant="text"
+                      width="50%"
+                      height={20}
+                      sx={{ mb: 1 }}
+                    />
+                    <Skeleton
+                      variant="text"
+                      width="40%"
+                      height={20}
+                      sx={{ mb: 3 }}
+                    />
                     <Box display="flex" gap={2}>
-                      <Skeleton variant="rectangular" width="50%" height={40} sx={{ borderRadius: 1 }} />
-                      <Skeleton variant="rectangular" width="50%" height={40} sx={{ borderRadius: 1 }} />
+                      <Skeleton
+                        variant="rectangular"
+                        width="50%"
+                        height={40}
+                        sx={{ borderRadius: 1 }}
+                      />
+                      <Skeleton
+                        variant="rectangular"
+                        width="50%"
+                        height={40}
+                        sx={{ borderRadius: 1 }}
+                      />
                     </Box>
                   </CardContent>
                 </Card>
@@ -290,33 +366,49 @@ export default function RestaurantPage() {
   // Error state
   if (error) {
     return (
-      <Box sx={{ 
-        minHeight: '100vh', 
-        bgcolor: '#f5f5f5',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        p: 2
-      }}>
+      <Box
+        sx={{
+          minHeight: "100vh",
+          bgcolor: "#f5f5f5",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          p: 2,
+        }}
+      >
         <Container maxWidth="sm">
-          <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 2, boxShadow: 1 }}>
-            <ErrorOutline sx={{ fontSize: 60, color: '#d70f64', mb: 3, opacity: 0.8 }} />
-            <Typography variant="h5" gutterBottom color="#d70f64" sx={{ fontWeight: 'bold', mb: 2 }}>
+          <Paper
+            sx={{ p: 4, textAlign: "center", borderRadius: 2, boxShadow: 1 }}
+          >
+            <ErrorOutline
+              sx={{ fontSize: 60, color: "#d70f64", mb: 3, opacity: 0.8 }}
+            />
+            <Typography
+              variant="h5"
+              gutterBottom
+              color="#d70f64"
+              sx={{ fontWeight: "bold", mb: 2 }}
+            >
               Connection Error
             </Typography>
-            <Typography variant="body1" color="text.secondary" paragraph sx={{ mb: 3 }}>
+            <Typography
+              variant="body1"
+              color="text.secondary"
+              paragraph
+              sx={{ mb: 3 }}
+            >
               {error}
             </Typography>
-            
+
             <Button
               variant="contained"
               onClick={fetchRestaurants}
               startIcon={<Refresh />}
-              sx={{ 
-                bgcolor: '#d70f64',
-                '&:hover': { bgcolor: '#b80d55' },
+              sx={{
+                bgcolor: "#d70f64",
+                "&:hover": { bgcolor: "#b80d55" },
                 px: 4,
-                py: 1.5
+                py: 1.5,
               }}
             >
               Retry Connection
@@ -328,31 +420,39 @@ export default function RestaurantPage() {
   }
 
   return (
-    <Box sx={{ 
-      minHeight: '100vh', 
-      bgcolor: '#f5f5f5',
-      pb: 12
-    }}>
+    <Box
+      sx={{
+        minHeight: "100vh",
+        bgcolor: "#f5f5f5",
+        pb: 12,
+      }}
+    >
       <Container maxWidth="lg" sx={{ py: 4 }}>
         {/* Header Section */}
         <Box sx={{ mb: 4 }}>
-          <Typography variant="h4" gutterBottom sx={{ 
-            fontWeight: 'bold',
-            color: '#d70f64',
-            mb: 3,
-            textAlign: 'center'
-          }}>
+          <Typography
+            variant="h4"
+            gutterBottom
+            sx={{
+              fontWeight: "bold",
+              color: "#d70f64",
+              mb: 3,
+              textAlign: "center",
+            }}
+          >
             FoodieApp
           </Typography>
 
           {/* Search Section */}
-          <Paper sx={{ 
-            p: 2, 
-            mb: 3, 
-            borderRadius: 2, 
-            boxShadow: 1,
-            bgcolor: 'white'
-          }}>
+          <Paper
+            sx={{
+              p: 2,
+              mb: 3,
+              borderRadius: 2,
+              boxShadow: 1,
+              bgcolor: "white",
+            }}
+          >
             <TextField
               fullWidth
               variant="outlined"
@@ -362,29 +462,29 @@ export default function RestaurantPage() {
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Search sx={{ color: '#d70f64' }} />
+                    <Search sx={{ color: "#d70f64" }} />
                   </InputAdornment>
                 ),
                 endAdornment: searchQuery && (
                   <InputAdornment position="end">
-                    <IconButton 
-                      onClick={() => setSearchQuery("")} 
+                    <IconButton
+                      onClick={() => setSearchQuery("")}
                       size="small"
                       edge="end"
-                      sx={{ color: '#666' }}
+                      sx={{ color: "#666" }}
                     >
                       <Clear />
                     </IconButton>
                   </InputAdornment>
-                )
+                ),
               }}
               sx={{
-                '& .MuiOutlinedInput-root': {
+                "& .MuiOutlinedInput-root": {
                   borderRadius: 1,
-                  '&:hover fieldset': {
-                    borderColor: '#d70f64',
+                  "&:hover fieldset": {
+                    borderColor: "#d70f64",
                   },
-                }
+                },
               }}
             />
           </Paper>
@@ -400,13 +500,13 @@ export default function RestaurantPage() {
                   label="All"
                   onClick={() => setFilteredCuisine("")}
                   variant={!filteredCuisine ? "filled" : "outlined"}
-                  sx={{ 
-                    bgcolor: !filteredCuisine ? '#d70f64' : 'transparent',
-                    color: !filteredCuisine ? 'white' : '#666',
-                    borderColor: '#d70f64',
-                    '&:hover': {
-                      bgcolor: !filteredCuisine ? '#b80d55' : '#f0f0f0'
-                    }
+                  sx={{
+                    bgcolor: !filteredCuisine ? "#d70f64" : "transparent",
+                    color: !filteredCuisine ? "white" : "#666",
+                    borderColor: "#d70f64",
+                    "&:hover": {
+                      bgcolor: !filteredCuisine ? "#b80d55" : "#f0f0f0",
+                    },
                   }}
                 />
                 {cuisines.map((cuisine) => (
@@ -414,14 +514,18 @@ export default function RestaurantPage() {
                     key={cuisine}
                     label={cuisine}
                     onClick={() => setFilteredCuisine(cuisine)}
-                    variant={filteredCuisine === cuisine ? "filled" : "outlined"}
-                    sx={{ 
-                      bgcolor: filteredCuisine === cuisine ? '#d70f64' : 'transparent',
-                      color: filteredCuisine === cuisine ? 'white' : '#666',
-                      borderColor: '#d70f64',
-                      '&:hover': {
-                        bgcolor: filteredCuisine === cuisine ? '#b80d55' : '#f0f0f0'
-                      }
+                    variant={
+                      filteredCuisine === cuisine ? "filled" : "outlined"
+                    }
+                    sx={{
+                      bgcolor:
+                        filteredCuisine === cuisine ? "#d70f64" : "transparent",
+                      color: filteredCuisine === cuisine ? "white" : "#666",
+                      borderColor: "#d70f64",
+                      "&:hover": {
+                        bgcolor:
+                          filteredCuisine === cuisine ? "#b80d55" : "#f0f0f0",
+                      },
                     }}
                   />
                 ))}
@@ -431,12 +535,12 @@ export default function RestaurantPage() {
         </Box>
 
         {/* Debug info for testing */}
-        {process.env.NODE_ENV === 'development' && restaurants.length > 0 && (
-          <Alert severity="info" sx={{ mb: 3, fontSize: '0.8rem' }}>
-            Debug: Showing {restaurants.length} restaurants. 
-            Available: {restaurants.filter(r => r.menu_available).length} | 
-            Updating: {restaurants.filter(r => r.menu_updating).length} |
-            Deals: {restaurants.filter(r => r.deal_count > 0).length}
+        {process.env.NODE_ENV === "development" && restaurants.length > 0 && (
+          <Alert severity="info" sx={{ mb: 3, fontSize: "0.8rem" }}>
+            Debug: Showing {restaurants.length} restaurants. Available:{" "}
+            {restaurants.filter((r) => r.menu_available).length} | Updating:{" "}
+            {restaurants.filter((r) => r.menu_updating).length} | Deals:{" "}
+            {restaurants.filter((r) => r.deal_count > 0).length}
           </Alert>
         )}
 
@@ -457,8 +561,10 @@ export default function RestaurantPage() {
               ))}
             </Grid>
           ) : (
-            <Paper sx={{ p: 6, textAlign: 'center', borderRadius: 2 }}>
-              <Search sx={{ fontSize: 60, color: '#d70f64', mb: 3, opacity: 0.5 }} />
+            <Paper sx={{ p: 6, textAlign: "center", borderRadius: 2 }}>
+              <Search
+                sx={{ fontSize: 60, color: "#d70f64", mb: 3, opacity: 0.5 }}
+              />
               <Typography variant="h6" gutterBottom color="#d70f64">
                 No matching restaurants
               </Typography>
@@ -466,13 +572,13 @@ export default function RestaurantPage() {
                 variant="outlined"
                 onClick={clearFilters}
                 startIcon={<Clear />}
-                sx={{ 
-                  borderColor: '#d70f64',
-                  color: '#d70f64',
-                  '&:hover': {
-                    borderColor: '#b80d55',
-                    bgcolor: 'rgba(215, 15, 100, 0.04)'
-                  }
+                sx={{
+                  borderColor: "#d70f64",
+                  color: "#d70f64",
+                  "&:hover": {
+                    borderColor: "#b80d55",
+                    bgcolor: "rgba(215, 15, 100, 0.04)",
+                  },
                 }}
               >
                 Clear Filters
@@ -499,20 +605,24 @@ export default function RestaurantPage() {
 
 // Restaurant Card Component - UPDATED with image support, safe rating handling, and deal button
 function RestaurantCard({
-  restaurant, 
-  onFavoriteToggle, 
+  restaurant,
+  onFavoriteToggle,
   isFavorite,
   onViewMenu,
-  onDealClick  // Add this prop
+  onDealClick, // Add this prop
 }) {
   // ALWAYS set menu as available
   const menuAvailable = true;
-  
+
   // Safely handle rating - ensure it's a number
-  const rating = typeof restaurant.rating === 'number' ? restaurant.rating : 
-                typeof restaurant.rating === 'string' ? parseFloat(restaurant.rating) || 0 : 0;
+  const rating =
+    typeof restaurant.rating === "number"
+      ? restaurant.rating
+      : typeof restaurant.rating === "string"
+        ? parseFloat(restaurant.rating) || 0
+        : 0;
   const formattedRating = rating > 0 ? rating.toFixed(1) : "0.0";
-  
+
   console.log(`Restaurant: ${restaurant.name}`, {
     menu_available: menuAvailable,
     menu_item_count: restaurant.menu_item_count,
@@ -521,33 +631,37 @@ function RestaurantCard({
     image_url: restaurant.image_url,
     original_rating: restaurant.rating,
     parsed_rating: rating,
-    formatted_rating: formattedRating
+    formatted_rating: formattedRating,
   });
 
   return (
-    <Card sx={{ 
-      mb: 3,
-      overflow: 'hidden',
-      borderRadius: 2,
-      boxShadow: 2,
-      position: 'relative',
-      bgcolor: 'white',
-      transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-      '&:hover': {
-        transform: 'translateY(-2px)',
-        boxShadow: 4
-      }
-    }}>
+    <Card
+      sx={{
+        mb: 3,
+        overflow: "hidden",
+        borderRadius: 2,
+        boxShadow: 2,
+        position: "relative",
+        bgcolor: "white",
+        transition: "transform 0.2s ease, box-shadow 0.2s ease",
+        "&:hover": {
+          transform: "translateY(-2px)",
+          boxShadow: 4,
+        },
+      }}
+    >
       {/* Restaurant Image */}
       <CardMedia
         component="img"
         height="180"
-        image={restaurant.image || restaurant.image_url || DEFAULT_RESTAURANT_IMAGE}
+        image={
+          restaurant.image || restaurant.image_url || DEFAULT_RESTAURANT_IMAGE
+        }
         alt={restaurant.name}
         sx={{
-          objectFit: 'cover',
-          width: '100%',
-          backgroundColor: '#f5f5f5'
+          objectFit: "cover",
+          width: "100%",
+          backgroundColor: "#f5f5f5",
         }}
       />
 
@@ -557,19 +671,19 @@ function RestaurantCard({
           badgeContent={`${restaurant.menu_item_count} items`}
           color="success"
           sx={{
-            position: 'absolute',
+            position: "absolute",
             top: 12,
             left: 12,
             zIndex: 2,
-            '& .MuiBadge-badge': {
+            "& .MuiBadge-badge": {
               px: 2,
               py: 0.5,
-              borderRadius: '12px',
-              fontWeight: 'bold',
-              fontSize: '0.7rem',
-              bgcolor: '#4caf50',
-              color: 'white'
-            }
+              borderRadius: "12px",
+              fontWeight: "bold",
+              fontSize: "0.7rem",
+              bgcolor: "#4caf50",
+              color: "white",
+            },
           }}
         />
       )}
@@ -578,19 +692,19 @@ function RestaurantCard({
       {rating > 0 && (
         <Box
           sx={{
-            position: 'absolute',
+            position: "absolute",
             top: 12,
             right: 12,
             zIndex: 2,
-            display: 'flex',
-            alignItems: 'center',
-            bgcolor: 'rgba(0, 0, 0, 0.7)',
-            color: 'white',
+            display: "flex",
+            alignItems: "center",
+            bgcolor: "rgba(0, 0, 0, 0.7)",
+            color: "white",
             px: 1.5,
             py: 0.5,
-            borderRadius: '12px',
-            fontWeight: 'bold',
-            fontSize: '0.8rem'
+            borderRadius: "12px",
+            fontWeight: "bold",
+            fontSize: "0.8rem",
           }}
         >
           â˜… {formattedRating}
@@ -603,38 +717,43 @@ function RestaurantCard({
           badgeContent={`${restaurant.deal_count} deals`}
           color="warning"
           sx={{
-            position: 'absolute',
+            position: "absolute",
             top: 12,
             left: restaurant.menu_item_count > 0 ? 140 : 12,
             zIndex: 2,
-            '& .MuiBadge-badge': {
+            "& .MuiBadge-badge": {
               px: 2,
               py: 0.5,
-              borderRadius: '12px',
-              fontWeight: 'bold',
-              fontSize: '0.7rem',
-              bgcolor: '#ff9800',
-              color: 'white'
-            }
+              borderRadius: "12px",
+              fontWeight: "bold",
+              fontSize: "0.7rem",
+              bgcolor: "#ff9800",
+              color: "white",
+            },
           }}
         />
       )}
 
       <CardContent sx={{ p: 3 }}>
         {/* Restaurant Name */}
-        <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          alignItems="flex-start"
+          mb={2}
+        >
           <Typography variant="h6" fontWeight="bold" color="#d70f64">
             {restaurant.name}
           </Typography>
           <IconButton
             onClick={onFavoriteToggle}
             size="small"
-            sx={{ 
-              color: isFavorite ? '#d70f64' : '#999',
-              '&:hover': {
-                bgcolor: 'rgba(215, 15, 100, 0.08)',
-                color: '#d70f64'
-              }
+            sx={{
+              color: isFavorite ? "#d70f64" : "#999",
+              "&:hover": {
+                bgcolor: "rgba(215, 15, 100, 0.08)",
+                color: "#d70f64",
+              },
             }}
           >
             {isFavorite ? <Favorite /> : <FavoriteBorder />}
@@ -642,7 +761,12 @@ function RestaurantCard({
         </Box>
 
         {/* Cuisine Type */}
-        <Typography variant="subtitle1" fontWeight="bold" color="text.primary" mb={2}>
+        <Typography
+          variant="subtitle1"
+          fontWeight="bold"
+          color="text.primary"
+          mb={2}
+        >
           {restaurant.cuisine}
         </Typography>
 
@@ -652,23 +776,26 @@ function RestaurantCard({
             checked={restaurant.is_open}
             size="small"
             disabled
-            sx={{ 
-              color: restaurant.is_open ? '#4caf50' : '#999',
-              '&.Mui-checked': {
-                color: '#4caf50',
+            sx={{
+              color: restaurant.is_open ? "#4caf50" : "#999",
+              "&.Mui-checked": {
+                color: "#4caf50",
               },
               p: 0,
-              mr: 1
+              mr: 1,
             }}
           />
-          <Typography variant="body2" color={restaurant.is_open ? '#4caf50' : '#999'}>
+          <Typography
+            variant="body2"
+            color={restaurant.is_open ? "#4caf50" : "#999"}
+          >
             Open Now
           </Typography>
         </Box>
 
         {/* Location */}
         <Box display="flex" alignItems="center" mb={1}>
-          <LocationOn sx={{ fontSize: 16, color: '#666', mr: 1 }} />
+          <LocationOn sx={{ fontSize: 16, color: "#666", mr: 1 }} />
           <Typography variant="body2" color="#666">
             {restaurant.location}
           </Typography>
@@ -676,7 +803,7 @@ function RestaurantCard({
 
         {/* Delivery Time */}
         <Box display="flex" alignItems="center" mb={1}>
-          <AccessTime sx={{ fontSize: 16, color: '#666', mr: 1 }} />
+          <AccessTime sx={{ fontSize: 16, color: "#666", mr: 1 }} />
           <Typography variant="body2" color="#666">
             {restaurant.delivery_time} min
           </Typography>
@@ -696,23 +823,23 @@ function RestaurantCard({
             fullWidth
             onClick={onViewMenu}
             sx={{
-              borderColor: '#d70f64',
-              color: '#d70f64',
+              borderColor: "#d70f64",
+              color: "#d70f64",
               borderRadius: 1,
-              textTransform: 'uppercase',
-              fontWeight: 'bold',
+              textTransform: "uppercase",
+              fontWeight: "bold",
               py: 1.2,
-              fontSize: '0.85rem',
-              letterSpacing: '0.5px',
-              '&:hover': {
-                borderColor: '#b80d55',
-                bgcolor: 'rgba(215, 15, 100, 0.04)'
-              }
+              fontSize: "0.85rem",
+              letterSpacing: "0.5px",
+              "&:hover": {
+                borderColor: "#b80d55",
+                bgcolor: "rgba(215, 15, 100, 0.04)",
+              },
             }}
           >
             View Menu
           </Button>
-          
+
           {restaurant.deal_count > 0 ? (
             <Button
               variant="contained"
@@ -720,17 +847,17 @@ function RestaurantCard({
               onClick={() => onDealClick && onDealClick(restaurant.id)}
               startIcon={<LocalOffer />}
               sx={{
-                bgcolor: '#ff9800',
-                color: 'white',
+                bgcolor: "#ff9800",
+                color: "white",
                 borderRadius: 1,
-                textTransform: 'uppercase',
-                fontWeight: 'bold',
+                textTransform: "uppercase",
+                fontWeight: "bold",
                 py: 1.2,
-                fontSize: '0.85rem',
-                letterSpacing: '0.5px',
-                '&:hover': {
-                  bgcolor: '#e68900'
-                }
+                fontSize: "0.85rem",
+                letterSpacing: "0.5px",
+                "&:hover": {
+                  bgcolor: "#e68900",
+                },
               }}
             >
               View Deals
@@ -741,17 +868,17 @@ function RestaurantCard({
               fullWidth
               onClick={onViewMenu}
               sx={{
-                bgcolor: '#d70f64',
-                color: 'white',
+                bgcolor: "#d70f64",
+                color: "white",
                 borderRadius: 1,
-                textTransform: 'uppercase',
-                fontWeight: 'bold',
+                textTransform: "uppercase",
+                fontWeight: "bold",
                 py: 1.2,
-                fontSize: '0.85rem',
-                letterSpacing: '0.5px',
-                '&:hover': {
-                  bgcolor: '#b80d55'
-                }
+                fontSize: "0.85rem",
+                letterSpacing: "0.5px",
+                "&:hover": {
+                  bgcolor: "#b80d55",
+                },
               }}
             >
               Order Now
@@ -770,13 +897,13 @@ function RestaurantCard({
               variant="outlined"
               onClick={() => onDealClick && onDealClick(restaurant.id)}
               sx={{
-                cursor: 'pointer',
-                fontWeight: 'medium',
-                fontSize: '0.75rem',
-                '&:hover': {
-                  backgroundColor: '#ff9800',
-                  color: 'white'
-                }
+                cursor: "pointer",
+                fontWeight: "medium",
+                fontSize: "0.75rem",
+                "&:hover": {
+                  backgroundColor: "#ff9800",
+                  color: "white",
+                },
               }}
             />
           </Box>
@@ -789,20 +916,35 @@ function RestaurantCard({
 // Empty State Component
 function EmptyState({ fetchRestaurants }) {
   return (
-    <Paper sx={{ p: 6, textAlign: 'center', borderRadius: 2, maxWidth: 500, mx: 'auto' }}>
-      <Restaurant sx={{ fontSize: 80, color: '#d70f64', mb: 3, opacity: 0.7 }} />
-      <Typography variant="h5" gutterBottom color="#d70f64" sx={{ fontWeight: 'bold', mb: 2 }}>
+    <Paper
+      sx={{
+        p: 6,
+        textAlign: "center",
+        borderRadius: 2,
+        maxWidth: 500,
+        mx: "auto",
+      }}
+    >
+      <Restaurant
+        sx={{ fontSize: 80, color: "#d70f64", mb: 3, opacity: 0.7 }}
+      />
+      <Typography
+        variant="h5"
+        gutterBottom
+        color="#d70f64"
+        sx={{ fontWeight: "bold", mb: 2 }}
+      >
         No Restaurants Found
       </Typography>
       <Button
         variant="contained"
         onClick={fetchRestaurants}
         startIcon={<Refresh />}
-        sx={{ 
-          bgcolor: '#d70f64',
-          '&:hover': { bgcolor: '#b80d55' },
+        sx={{
+          bgcolor: "#d70f64",
+          "&:hover": { bgcolor: "#b80d55" },
           px: 4,
-          py: 1.5
+          py: 1.5,
         }}
       >
         Retry Connection
@@ -810,5 +952,3 @@ function EmptyState({ fetchRestaurants }) {
     </Paper>
   );
 }
-
-
