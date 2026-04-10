@@ -170,21 +170,21 @@ export default function CuisineFilterPage() {
             <Button 
               size="small" 
               variant="text" 
-              onClick={() => window.open(`${import.meta.env.VITE_API_URL || "http://localhost:4000"}/api/health', '_blank')}
+              onClick={() => window.open(`${import.meta.env.VITE_API_URL || "http://localhost:4000"}/api/health`, '_blank')}
             >
               Health Check
             </Button>
             <Button 
               size="small" 
               variant="text" 
-              onClick={() => window.open(`${import.meta.env.VITE_API_URL || "http://localhost:4000"}/api/cuisines', '_blank')}
+              onClick={() => window.open(`${import.meta.env.VITE_API_URL || "http://localhost:4000"}/api/cuisines`, '_blank')}
             >
               All Cuisines
             </Button>
             <Button 
               size="small" 
               variant="text" 
-              onClick={() => window.open(`${import.meta.env.VITE_API_URL || "http://localhost:4000"}/restaurants', '_blank')}
+              onClick={() => window.open(`${import.meta.env.VITE_API_URL || "http://localhost:4000"}/restaurants`, '_blank')}
             >
               All Restaurants
             </Button>

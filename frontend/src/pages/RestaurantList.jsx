@@ -1,5 +1,4 @@
-﻿import API_BASE_URL from '../config/api'
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { formatImageUrl } from "../utils/formatImageUrl";
@@ -17,7 +16,7 @@ export default function RestaurantList() {
   const fetchRestaurants = () => {
     setLoading(true);
     axios
-      .get("${import.meta.env.VITE_API_URL || "http://localhost:4000"}/restaurants", {
+      .get(`${import.meta.env.VITE_API_URL || "http://localhost:4000"}/restaurants`, {
         params: { q: search, _page: page, _limit: limit },
       })
       .then((res) => {
