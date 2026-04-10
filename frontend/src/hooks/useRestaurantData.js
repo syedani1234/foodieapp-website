@@ -1,4 +1,4 @@
-﻿import API_BASE_URL from './config/api';
+﻿import API_BASE_URL from "../config/api";
 
 // src/hooks/useRestaurantData.js
 import { useQuery } from "@tanstack/react-query";
@@ -15,10 +15,20 @@ import axios from "axios";
  * @param {number} params.limit - number of items per page
  * @returns {Promise<{items: Array, total: number}>}
  */
-const fetchRestaurants = async ({ search = "", cuisine = "", page = 1, limit = 12 }) => {
+const fetchRestaurants = async ({
+  search = "",
+  cuisine = "",
+  page = 1,
+  limit = 12,
+}) => {
   try {
-    console.log("ðŸ” Fetching restaurants with params:", { search, cuisine, page, limit });
-    
+    console.log("ðŸ” Fetching restaurants with params:", {
+      search,
+      cuisine,
+      page,
+      limit,
+    });
+
     // Build query parameters based on your backend API
     const params = {
       page,
@@ -38,10 +48,10 @@ const fetchRestaurants = async ({ search = "", cuisine = "", page = 1, limit = 1
       // Alternative: params.category = cuisine.trim();
     }
 
-    const response = await axios.get("${import.meta.env.VITE_API_URL || "http://localhost:4000"}/restaurants", {
+    const response = await axios.get(`${API_BASE_URL}/restaurants`, {
       params,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       timeout: 10000, // 10 second timeout
     });
@@ -49,7 +59,7 @@ const fetchRestaurants = async ({ search = "", cuisine = "", page = 1, limit = 1
     console.log("âœ… API Response:", {
       data: response.data,
       headers: response.headers,
-      status: response.status
+      status: response.status,
     });
 
     // Handle different response structures
@@ -75,10 +85,11 @@ const fetchRestaurants = async ({ search = "", cuisine = "", page = 1, limit = 1
     } else {
       // Fallback - try to extract data from response
       items = response.data || [];
-      total = response.headers['x-total-count'] || 
-              response.data?.total || 
-              response.data?.count || 
-              items.length;
+      total =
+        response.headers["x-total-count"] ||
+        response.data?.total ||
+        response.data?.count ||
+        items.length;
     }
 
     console.log("ðŸ“Š Processed data:", { items, total });
@@ -91,21 +102,25 @@ const fetchRestaurants = async ({ search = "", cuisine = "", page = 1, limit = 1
       status: err.response?.status,
       config: {
         url: err.config?.url,
-        params: err.config?.params
-      }
+        params: err.config?.params,
+      },
     });
-    
+
     // Provide more specific error messages
     if (err.response) {
       if (err.response.status === 404) {
-        throw new Error("Restaurants API endpoint not found. Please check the server.");
+        throw new Error(
+          "Restaurants API endpoint not found. Please check the server.",
+        );
       }
       if (err.response.status >= 500) {
         throw new Error("Server error. Please try again later.");
       }
     }
-    
-    throw new Error(err.message || "Failed to fetch restaurants. Please try again.");
+
+    throw new Error(
+      err.message || "Failed to fetch restaurants. Please try again.",
+    );
   }
 };
 
@@ -124,14 +139,14 @@ const fetchRestaurants = async ({ search = "", cuisine = "", page = 1, limit = 1
 export const useRestaurantsData = (
   { search = "", cuisine = "", page = 1, limit = 12 } = {},
   onSuccess,
-  onError
+  onError,
 ) => {
   return useQuery({
     queryKey: ["restaurants", { search, cuisine, page, limit }],
     queryFn: () => fetchRestaurants({ search, cuisine, page, limit }),
     keepPreviousData: true, // preserve previous page data while fetching new
-    staleTime: 1000 * 60,   // 1 minute cache
-    retry: 2,               // retry twice on failure
+    staleTime: 1000 * 60, // 1 minute cache
+    retry: 2, // retry twice on failure
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     refetchOnWindowFocus: false,
     onSuccess: (data) => {
@@ -144,5 +159,3 @@ export const useRestaurantsData = (
     },
   });
 };
-
-

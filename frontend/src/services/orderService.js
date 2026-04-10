@@ -1,18 +1,18 @@
-﻿import API_BASE_URL from './config/api';
+﻿import API_BASE_URL from "../config/api";
 
 // services/orderService.js
-const API_BASE_URL = `${import.meta.env.VITE_API_URL || "http://localhost:4000"}/api';
+const ORDER_API_BASE_URL = `${API_BASE_URL}/api`;
 
 export const orderService = {
   // Get order by ID
   async getOrderById(orderId) {
     try {
-      const response = await fetch(`${API_BASE_URL}/orders/${orderId}`);
+      const response = await fetch(`${ORDER_API_BASE_URL}/orders/${orderId}`);
       const data = await response.json();
-      console.log('OrderService: Fetched order by ID:', data);
+      console.log("OrderService: Fetched order by ID:", data);
       return data;
     } catch (error) {
-      console.error('OrderService: Error fetching order by ID:', error);
+      console.error("OrderService: Error fetching order by ID:", error);
       throw error;
     }
   },
@@ -20,12 +20,12 @@ export const orderService = {
   // Get current order (latest)
   async getCurrentOrder() {
     try {
-      const response = await fetch(`${API_BASE_URL}/order/current`);
+      const response = await fetch(`${ORDER_API_BASE_URL}/order/current`);
       const data = await response.json();
-      console.log('OrderService: Fetched current order:', data);
+      console.log("OrderService: Fetched current order:", data);
       return data;
     } catch (error) {
-      console.error('OrderService: Error fetching current order:', error);
+      console.error("OrderService: Error fetching current order:", error);
       throw error;
     }
   },
@@ -33,18 +33,18 @@ export const orderService = {
   // Create new order
   async createOrder(orderData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/orders`, {
-        method: 'POST',
+      const response = await fetch(`${ORDER_API_BASE_URL}/orders`, {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(orderData)
+        body: JSON.stringify(orderData),
       });
       const data = await response.json();
-      console.log('OrderService: Created order:', data);
+      console.log("OrderService: Created order:", data);
       return data;
     } catch (error) {
-      console.error('OrderService: Error creating order:', error);
+      console.error("OrderService: Error creating order:", error);
       throw error;
     }
   },
@@ -52,11 +52,13 @@ export const orderService = {
   // Get order status
   async getOrderStatus(orderId) {
     try {
-      const response = await fetch(`${API_BASE_URL}/orders/${orderId}/status`);
+      const response = await fetch(
+        `${ORDER_API_BASE_URL}/orders/${orderId}/status`,
+      );
       const data = await response.json();
       return data;
     } catch (error) {
-      console.error('OrderService: Error fetching order status:', error);
+      console.error("OrderService: Error fetching order status:", error);
       throw error;
     }
   },
@@ -64,14 +66,14 @@ export const orderService = {
   // Get user orders
   async getUserOrders(userId) {
     try {
-      const response = await fetch(`${API_BASE_URL}/users/${userId}/orders`);
+      const response = await fetch(
+        `${ORDER_API_BASE_URL}/users/${userId}/orders`,
+      );
       const data = await response.json();
       return data;
     } catch (error) {
-      console.error('OrderService: Error fetching user orders:', error);
+      console.error("OrderService: Error fetching user orders:", error);
       throw error;
     }
-  }
+  },
 };
-
-

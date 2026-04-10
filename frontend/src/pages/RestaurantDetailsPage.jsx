@@ -1,4 +1,4 @@
-﻿import API_BASE_URL from './config/api'
+﻿import API_BASE_URL from "../config/api";
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -32,7 +32,9 @@ export default function RestaurantDetailsPage() {
   useEffect(() => {
     setLoading(true);
     axios
-      .get(`${import.meta.env.VITE_API_URL || "http://localhost:4000"}/api/restaurants/${id}`)
+      .get(
+        `${import.meta.env.VITE_API_URL || "http://localhost:4000"}/api/restaurants/${id}`,
+      )
       .then((res) => {
         setRestaurant(res.data);
         setLoading(false);
@@ -50,7 +52,8 @@ export default function RestaurantDetailsPage() {
 
   if (loading) return <p className="text-center mt-10">Loading...</p>;
   if (error) return <p className="text-center mt-10 text-red-500">{error}</p>;
-  if (!restaurant) return <p className="text-center mt-10">Restaurant not found.</p>;
+  if (!restaurant)
+    return <p className="text-center mt-10">Restaurant not found.</p>;
 
   // Group menu items by category
   const menuByCategory = (restaurant.menu || []).reduce((acc, item) => {
@@ -64,12 +67,12 @@ export default function RestaurantDetailsPage() {
   const getBasePrice = (item) => {
     // Try base_price first
     const basePrice = safePrice(item.base_price);
-    
+
     // If no base_price, try regular price
     if (basePrice === 0) {
       return safePrice(item.price);
     }
-    
+
     return basePrice;
   };
 
@@ -85,7 +88,9 @@ export default function RestaurantDetailsPage() {
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
           <div className="absolute bottom-6 left-6 text-white">
-            <h1 className="text-3xl md:text-4xl font-bold mb-2">{restaurant.name}</h1>
+            <h1 className="text-3xl md:text-4xl font-bold mb-2">
+              {restaurant.name}
+            </h1>
             <div className="flex items-center gap-4">
               <span className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full">
                 {restaurant.cuisine_name}
@@ -120,7 +125,9 @@ export default function RestaurantDetailsPage() {
               </div>
               <div>
                 <p className="font-medium text-gray-800">Delivery Time</p>
-                <p className="text-gray-600 text-sm">{restaurant.delivery_time || '30-45'} mins</p>
+                <p className="text-gray-600 text-sm">
+                  {restaurant.delivery_time || "30-45"} mins
+                </p>
               </div>
             </div>
           </div>
@@ -133,7 +140,9 @@ export default function RestaurantDetailsPage() {
               <div>
                 <p className="font-medium text-gray-800">Delivery Fee</p>
                 <p className="text-gray-600 text-sm">
-                  {restaurant.delivery_fee === 0 ? 'Free' : `Rs. ${restaurant.delivery_fee || 50}`}
+                  {restaurant.delivery_fee === 0
+                    ? "Free"
+                    : `Rs. ${restaurant.delivery_fee || 50}`}
                 </p>
               </div>
             </div>
@@ -155,21 +164,23 @@ export default function RestaurantDetailsPage() {
             {restaurant.menu?.length || 0} items available
           </p>
         </div>
-        
+
         {Object.keys(menuByCategory).length > 0 ? (
           Object.entries(menuByCategory).map(([category, items]) => (
             <div key={category} className="mb-10">
               <div className="flex items-center gap-3 mb-4">
-                <h3 className="text-xl md:text-2xl font-bold text-gray-800">{category}</h3>
+                <h3 className="text-xl md:text-2xl font-bold text-gray-800">
+                  {category}
+                </h3>
                 <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
                   {items.length} items
                 </span>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {items.map((item) => {
                   const basePrice = getBasePrice(item);
-                  
+
                   return (
                     <div
                       key={item.id}
@@ -188,7 +199,7 @@ export default function RestaurantDetailsPage() {
                               />
                             </div>
                           )}
-                          
+
                           {/* Item Details */}
                           <div className="flex-1 min-w-0">
                             <div className="flex justify-between items-start mb-2">
@@ -199,15 +210,17 @@ export default function RestaurantDetailsPage() {
                                 Rs. {basePrice.toFixed(0)}
                               </span>
                             </div>
-                            
+
                             {item.description && (
                               <p className="text-gray-600 text-sm mb-4 line-clamp-2">
                                 {item.description}
                               </p>
                             )}
-                            
+
                             {/* Show available options if any */}
-                            {(item.addOns?.length > 0 || item.toppings?.length > 0 || item.variations?.length > 0) && (
+                            {(item.addOns?.length > 0 ||
+                              item.toppings?.length > 0 ||
+                              item.variations?.length > 0) && (
                               <div className="flex flex-wrap gap-2 mb-4">
                                 {item.addOns?.length > 0 && (
                                   <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
@@ -226,16 +239,16 @@ export default function RestaurantDetailsPage() {
                                 )}
                               </div>
                             )}
-                            
+
                             {/* Action Buttons */}
                             <div className="flex items-center justify-between">
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  addToFavorites({ 
-                                    ...item, 
+                                  addToFavorites({
+                                    ...item,
                                     restaurantId: restaurant.id,
-                                    restaurantName: restaurant.name 
+                                    restaurantName: restaurant.name,
                                   });
                                 }}
                                 disabled={isFavorite(item.id)}
@@ -245,10 +258,14 @@ export default function RestaurantDetailsPage() {
                                     : "bg-red-50 text-red-600 hover:bg-red-100"
                                 }`}
                               >
-                                <span>{isFavorite(item.id) ? "â¤ï¸" : "ðŸ¤"}</span>
-                                <span>{isFavorite(item.id) ? "Added" : "Favorite"}</span>
+                                <span>
+                                  {isFavorite(item.id) ? "â¤ï¸" : "ðŸ¤"}
+                                </span>
+                                <span>
+                                  {isFavorite(item.id) ? "Added" : "Favorite"}
+                                </span>
                               </button>
-                              
+
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -301,5 +318,3 @@ export default function RestaurantDetailsPage() {
     </div>
   );
 }
-
-
