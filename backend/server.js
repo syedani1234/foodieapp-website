@@ -935,8 +935,8 @@ app.get("/cuisines/:slug", async (req, res) => {
    3. RESTAURANT ENDPOINTS
 ========================= */
 
-// GET all restaurants with filters
-app.get("/restaurants", async (req, res) => {
+// Shared handler for listing restaurants (used by both /restaurants and /api/restaurants)
+const getAllRestaurantsHandler = async (req, res) => {
   try {
     const {
       q = "",
@@ -1032,14 +1032,20 @@ app.get("/restaurants", async (req, res) => {
 
     res.json(restaurants);
   } catch (error) {
-    console.error("❌ /api/restaurants error:", error);
+    console.error("❌ /restaurants error:", error);
     res.status(500).json({
       error: "Failed to fetch restaurants",
       message: error.message,
       details: process.env.NODE_ENV === "development" ? error.sql : undefined,
     });
   }
-});
+};
+
+// GET all restaurants (original endpoint)
+app.get("/restaurants", getAllRestaurantsHandler);
+
+// GET all restaurants with /api prefix (for frontend compatibility)
+app.get("/api/restaurants", getAllRestaurantsHandler);
 
 // GET restaurant details by ID
 app.get("/api/restaurants/:id", async (req, res) => {
