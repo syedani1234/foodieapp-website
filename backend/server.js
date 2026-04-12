@@ -93,20 +93,29 @@ app.use(
 /* =========================
    DATABASE CONNECTION
 ========================= */
-const pool = mysql.createPool({
-  host: process.env.DB_HOST || "localhost",
-  port: parseInt(process.env.DB_PORT || "3306"),
-  user: process.env.DB_USER || "root",
-  password: process.env.DB_PASSWORD || "root123",
-  database: process.env.DB_NAME || "foodieapp",
-  connectionLimit: 20,
-  waitForConnections: true,
-  queueLimit: 0,
-  enableKeepAlive: true,
-  keepAliveInitialDelay: 0,
-  ...(process.env.DB_SSL === "true" && { ssl: { rejectUnauthorized: false } }),
-});
+let pool;
 
+// If DATABASE_URL is provided (production), use it
+if (process.env.DATABASE_URL) {
+  pool = mysql.createPool(process.env.DATABASE_URL);
+  console.log("✅ Using DATABASE_URL for connection");
+} else {
+  // Fallback to individual DB_ variables (local development)
+  pool = mysql.createPool({
+    host: process.env.DB_HOST || "localhost",
+    port: parseInt(process.env.DB_PORT || "3306"),
+    user: process.env.DB_USER || "root",
+    password: process.env.DB_PASSWORD || "root123",
+    database: process.env.DB_NAME || "foodieapp",
+    connectionLimit: 20,
+    waitForConnections: true,
+    queueLimit: 0,
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 0,
+    ...(process.env.DB_SSL === "true" && { ssl: { rejectUnauthorized: false } }),
+  });
+  console.log("✅ Using individual DB_ variables for connection");
+}
 // Test database connection
 async function testDatabaseConnection() {
   try {
