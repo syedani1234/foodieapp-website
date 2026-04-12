@@ -30,7 +30,7 @@ export default function CartPage() {
   if (!cartItems || cartItems.length === 0) {
     return (
       <div className="p-6 max-w-xl mx-auto text-center mt-20">
-        <div className="text-6xl mb-4">ðŸ›’</div>
+        <div className="text-6xl mb-4">🛒</div>
         <h1 className="text-2xl font-bold mb-3 text-gray-800">Your cart is empty</h1>
         <p className="text-gray-600 mb-6">Add items to get started</p>
         <Link
@@ -161,7 +161,7 @@ export default function CartPage() {
                         onClick={() => removeFromCart(index)}
                         className="text-gray-400 hover:text-red-500 text-xl"
                       >
-                        âœ•
+                        ✕
                       </button>
                     </div>
 
@@ -284,7 +284,7 @@ export default function CartPage() {
                             className="w-10 h-10 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-l-lg disabled:opacity-30 disabled:cursor-not-allowed"
                             disabled={item.quantity <= 1}
                           >
-                            <span className="text-xl">âˆ’</span>
+                            <span className="text-xl">−</span>
                           </button>
                           <span className="w-12 text-center font-bold text-gray-800">
                             {item.quantity}
@@ -355,12 +355,12 @@ export default function CartPage() {
                     {/* Breakdown */}
                     <div className="pl-4 space-y-1 text-sm text-gray-500">
                       <div className="flex justify-between">
-                        <span>â€¢ Base Price</span>
+                        <span>• Base Price</span>
                         <span>Rs. {formatPrice(totalBasePrice)}</span>
                       </div>
                       {totalExtrasPrice > 0 && (
                         <div className="flex justify-between">
-                          <span>â€¢ Extras & Modifications</span>
+                          <span>• Extras & Modifications</span>
                           <span>Rs. {formatPrice(totalExtrasPrice)}</span>
                         </div>
                       )}
@@ -397,11 +397,11 @@ export default function CartPage() {
                   {/* Additional Info */}
                   <div className="mt-6 space-y-2 text-sm text-gray-500">
                     <p className="flex items-center">
-                      <span className="mr-2">âœ“</span>
+                      <span className="mr-2">✓</span>
                       Free delivery on orders above Rs. 500
                     </p>
                     <p className="flex items-center">
-                      <span className="mr-2">âœ“</span>
+                      <span className="mr-2">✓</span>
                       Easy returns & refunds
                     </p>
                   </div>
@@ -436,5 +436,3 @@ export default function CartPage() {
     </div>
   );
 }
-
-

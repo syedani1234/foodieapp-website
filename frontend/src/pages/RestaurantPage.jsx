@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useFavorites } from "../context/FavoritesContext";
-import DealDialog from "../components/DealDialog"; // Add this import
+import DealDialog from "../components/DealDialog";
 import {
   Box,
   Container,
@@ -35,7 +35,7 @@ import {
   Restaurant,
   ErrorOutline,
   Refresh,
-  LocalOffer, // Add this import
+  LocalOffer,
 } from "@mui/icons-material";
 
 // API Configuration
@@ -44,11 +44,9 @@ const RESTAURANTS_ENDPOINT = `${API_BASE_URL}/restaurants`;
 // Helper function to ensure image URL is absolute
 const getImageUrl = (imagePath) => {
   if (!imagePath) return null;
-  // If it's already a full URL, return as is
   if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
     return imagePath;
   }
-  // Otherwise, prepend base URL if needed
   if (imagePath.startsWith("/")) {
     return `${API_BASE_URL}${imagePath}`;
   }
@@ -63,20 +61,17 @@ export default function RestaurantPage() {
   const navigate = useNavigate();
   const favoritesContext = useFavorites();
 
-  // Safely extract functions from context
   const addToFavorites = favoritesContext?.addToFavorites;
   const isFavorite = favoritesContext?.isFavorite;
 
-  // State management
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredCuisine, setFilteredCuisine] = useState("");
-  const [selectedDeal, setSelectedDeal] = useState(null); // Add this state
-  const [dealDialogOpen, setDealDialogOpen] = useState(false); // Add this state
+  const [selectedDeal, setSelectedDeal] = useState(null);
+  const [dealDialogOpen, setDealDialogOpen] = useState(false);
 
-  // Fetch all restaurants
   const fetchRestaurants = useCallback(async () => {
     try {
       setLoading(true);
@@ -92,7 +87,6 @@ export default function RestaurantPage() {
 
       console.log("API Response:", response.data);
 
-      // Extract restaurants data from different response formats
       let restaurantsData = [];
 
       if (response.data) {
@@ -108,18 +102,14 @@ export default function RestaurantPage() {
         }
       }
 
-      // Transform data - INCLUDING IMAGE HANDLING
       const transformedRestaurants = restaurantsData.map(
         (restaurant, index) => {
-          // ALWAYS set menu as available
-          const hasMenu = true; // Force true
-          const menuUpdating = false; // Force false
+          const hasMenu = true;
+          const menuUpdating = false;
 
-          // Get image URL (from your backend's img() helper or direct path)
           const imageUrl = restaurant.image || restaurant.image_url || null;
 
-          // Safely parse rating - handle string or number
-          let rating = 4.0 + Math.random() * 1.0; // Default random rating 4.0-5.0
+          let rating = 4.0 + Math.random() * 1.0;
           if (restaurant.rating !== undefined && restaurant.rating !== null) {
             if (typeof restaurant.rating === "string") {
               rating = parseFloat(restaurant.rating) || rating;
@@ -128,7 +118,6 @@ export default function RestaurantPage() {
             }
           }
 
-          // Get deal count from API or random for demo
           const dealCount =
             restaurant.deal_count || Math.floor(Math.random() * 5);
 
@@ -152,16 +141,15 @@ export default function RestaurantPage() {
               restaurant.delivery_time || restaurant.deliveryTime || "30-45",
             delivery_fee:
               restaurant.delivery_fee || restaurant.deliveryFee || 2.99,
-            is_open: restaurant.is_open !== false, // true by default unless explicitly false
+            is_open: restaurant.is_open !== false,
             has_menu: hasMenu,
             menu_updating: menuUpdating,
-            menu_available: true, // Always true
+            menu_available: true,
             menu_item_count: restaurant.menu_item_count || 0,
-            deal_count: dealCount, // Add deal count
-            // Image handling
+            deal_count: dealCount,
             image: getImageUrl(imageUrl),
             image_url: getImageUrl(imageUrl),
-            rating: rating, // Safely parsed rating
+            rating: rating,
           };
         },
       );
@@ -189,12 +177,10 @@ export default function RestaurantPage() {
     }
   }, []);
 
-  // Initial fetch
   useEffect(() => {
     fetchRestaurants();
   }, [fetchRestaurants]);
 
-  // Extract unique cuisines for filtering
   const cuisines = useMemo(() => {
     const cuisineSet = new Set();
     restaurants.forEach((restaurant) => {
@@ -205,7 +191,6 @@ export default function RestaurantPage() {
     return Array.from(cuisineSet).sort();
   }, [restaurants]);
 
-  // Filter restaurants based on search and cuisine
   const filteredRestaurants = useMemo(() => {
     if (!Array.isArray(restaurants) || restaurants.length === 0) {
       return [];
@@ -213,7 +198,6 @@ export default function RestaurantPage() {
 
     let filtered = restaurants;
 
-    // Filter by cuisine
     if (filteredCuisine) {
       filtered = filtered.filter((restaurant) =>
         restaurant.cuisine
@@ -222,7 +206,6 @@ export default function RestaurantPage() {
       );
     }
 
-    // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
       filtered = filtered.filter((restaurant) => {
@@ -239,7 +222,6 @@ export default function RestaurantPage() {
     return filtered;
   }, [restaurants, searchQuery, filteredCuisine]);
 
-  // Handle favorite toggle
   const handleFavoriteToggle = useCallback(
     (restaurant) => {
       if (addToFavorites && typeof addToFavorites === "function") {
@@ -260,7 +242,6 @@ export default function RestaurantPage() {
     [addToFavorites],
   );
 
-  // Check if item is favorite (safe)
   const checkIsFavorite = useCallback(
     (restaurantId) => {
       if (isFavorite && typeof isFavorite === "function") {
@@ -271,13 +252,11 @@ export default function RestaurantPage() {
     [isFavorite],
   );
 
-  // Clear all filters
   const clearFilters = useCallback(() => {
     setSearchQuery("");
     setFilteredCuisine("");
   }, []);
 
-  // Handle view restaurant details
   const handleViewRestaurant = useCallback(
     (restaurantId) => {
       navigate(`/restaurants/${restaurantId}`);
@@ -285,13 +264,11 @@ export default function RestaurantPage() {
     [navigate],
   );
 
-  // Add this function to handle deal selection
   const handleDealClick = useCallback((dealId) => {
     setSelectedDeal(dealId);
     setDealDialogOpen(true);
   }, []);
 
-  // Loading skeleton
   if (loading) {
     return (
       <Box sx={{ minHeight: "100vh", bgcolor: "#f5f5f5", py: 4 }}>
@@ -307,7 +284,6 @@ export default function RestaurantPage() {
             {[1, 2].map((i) => (
               <Grid item xs={12} key={i}>
                 <Card sx={{ borderRadius: 2 }}>
-                  {/* Image skeleton */}
                   <Skeleton
                     variant="rectangular"
                     height={180}
@@ -363,7 +339,6 @@ export default function RestaurantPage() {
     );
   }
 
-  // Error state
   if (error) {
     return (
       <Box
@@ -428,7 +403,6 @@ export default function RestaurantPage() {
       }}
     >
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        {/* Header Section */}
         <Box sx={{ mb: 4 }}>
           <Typography
             variant="h4"
@@ -443,7 +417,6 @@ export default function RestaurantPage() {
             FoodieApp
           </Typography>
 
-          {/* Search Section */}
           <Paper
             sx={{
               p: 2,
@@ -489,7 +462,6 @@ export default function RestaurantPage() {
             />
           </Paper>
 
-          {/* Cuisine Filters */}
           {restaurants.length > 0 && cuisines.length > 0 && (
             <Box sx={{ mb: 4 }}>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
@@ -534,7 +506,6 @@ export default function RestaurantPage() {
           )}
         </Box>
 
-        {/* Debug info for testing */}
         {process.env.NODE_ENV === "development" && restaurants.length > 0 && (
           <Alert severity="info" sx={{ mb: 3, fontSize: "0.8rem" }}>
             Debug: Showing {restaurants.length} restaurants. Available:{" "}
@@ -544,7 +515,6 @@ export default function RestaurantPage() {
           </Alert>
         )}
 
-        {/* Main Content - Restaurant Cards */}
         {restaurants.length > 0 ? (
           filteredRestaurants.length > 0 ? (
             <Grid container spacing={3}>
@@ -555,7 +525,7 @@ export default function RestaurantPage() {
                     onFavoriteToggle={() => handleFavoriteToggle(restaurant)}
                     isFavorite={checkIsFavorite(restaurant.id)}
                     onViewMenu={() => handleViewRestaurant(restaurant.id)}
-                    onDealClick={handleDealClick} // Pass deal click handler
+                    onDealClick={handleDealClick}
                   />
                 </Grid>
               ))}
@@ -590,7 +560,6 @@ export default function RestaurantPage() {
         )}
       </Container>
 
-      {/* Add DealDialog component at the bottom of your return statement (before closing Box) */}
       <DealDialog
         open={dealDialogOpen}
         onClose={() => {
@@ -603,18 +572,15 @@ export default function RestaurantPage() {
   );
 }
 
-// Restaurant Card Component - UPDATED with image support, safe rating handling, and deal button
 function RestaurantCard({
   restaurant,
   onFavoriteToggle,
   isFavorite,
   onViewMenu,
-  onDealClick, // Add this prop
+  onDealClick,
 }) {
-  // ALWAYS set menu as available
   const menuAvailable = true;
 
-  // Safely handle rating - ensure it's a number
   const rating =
     typeof restaurant.rating === "number"
       ? restaurant.rating
@@ -650,7 +616,6 @@ function RestaurantCard({
         },
       }}
     >
-      {/* Restaurant Image */}
       <CardMedia
         component="img"
         height="180"
@@ -665,7 +630,6 @@ function RestaurantCard({
         }}
       />
 
-      {/* Menu Available Badge - Only show if menu_item_count > 0 */}
       {restaurant.menu_item_count > 0 && (
         <Badge
           badgeContent={`${restaurant.menu_item_count} items`}
@@ -688,7 +652,6 @@ function RestaurantCard({
         />
       )}
 
-      {/* Rating Badge - Only show if rating > 0 */}
       {rating > 0 && (
         <Box
           sx={{
@@ -707,11 +670,10 @@ function RestaurantCard({
             fontSize: "0.8rem",
           }}
         >
-          â˜… {formattedRating}
+          ★ {formattedRating}
         </Box>
       )}
 
-      {/* Deal Count Badge - Only show if deal_count > 0 */}
       {restaurant.deal_count > 0 && (
         <Badge
           badgeContent={`${restaurant.deal_count} deals`}
@@ -735,7 +697,6 @@ function RestaurantCard({
       )}
 
       <CardContent sx={{ p: 3 }}>
-        {/* Restaurant Name */}
         <Box
           display="flex"
           justifyContent="space-between"
@@ -760,7 +721,6 @@ function RestaurantCard({
           </IconButton>
         </Box>
 
-        {/* Cuisine Type */}
         <Typography
           variant="subtitle1"
           fontWeight="bold"
@@ -770,7 +730,6 @@ function RestaurantCard({
           {restaurant.cuisine}
         </Typography>
 
-        {/* Open Now Status */}
         <Box display="flex" alignItems="center" mb={2}>
           <Checkbox
             checked={restaurant.is_open}
@@ -793,7 +752,6 @@ function RestaurantCard({
           </Typography>
         </Box>
 
-        {/* Location */}
         <Box display="flex" alignItems="center" mb={1}>
           <LocationOn sx={{ fontSize: 16, color: "#666", mr: 1 }} />
           <Typography variant="body2" color="#666">
@@ -801,7 +759,6 @@ function RestaurantCard({
           </Typography>
         </Box>
 
-        {/* Delivery Time */}
         <Box display="flex" alignItems="center" mb={1}>
           <AccessTime sx={{ fontSize: 16, color: "#666", mr: 1 }} />
           <Typography variant="body2" color="#666">
@@ -809,14 +766,12 @@ function RestaurantCard({
           </Typography>
         </Box>
 
-        {/* Delivery Fee */}
         <Typography variant="body2" color="#666" mb={3}>
           Delivery: Rs. {restaurant.delivery_fee}
         </Typography>
 
         <Divider sx={{ my: 2 }} />
 
-        {/* Action Buttons - UPDATED: Show "View Deals" button when deals available */}
         <Box display="flex" gap={2}>
           <Button
             variant="outlined"
@@ -886,7 +841,6 @@ function RestaurantCard({
           )}
         </Box>
 
-        {/* Deal Chip Alternative */}
         {restaurant.deal_count > 0 && (
           <Box display="flex" justifyContent="center" mt={2}>
             <Chip
@@ -913,7 +867,6 @@ function RestaurantCard({
   );
 }
 
-// Empty State Component
 function EmptyState({ fetchRestaurants }) {
   return (
     <Paper

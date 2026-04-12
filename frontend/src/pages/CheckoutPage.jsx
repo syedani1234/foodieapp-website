@@ -70,7 +70,7 @@ export default function CheckoutPage() {
 
   const createOrderAPI = async (orderData) => {
     try {
-      console.log("ðŸ“¦ Sending order to API:", orderData);
+      console.log("📦 Sending order to API:", orderData);
 
       const response = await fetch(
         `${import.meta.env.VITE_API_URL || "http://localhost:4000"}/api/orders`,
@@ -89,10 +89,10 @@ export default function CheckoutPage() {
         throw new Error(result.message || `HTTP ${response.status}`);
       }
 
-      console.log("âœ… Order API Response:", result);
+      console.log("✅ Order API Response:", result);
       return result;
     } catch (error) {
-      console.error("âŒ Order API Error:", error);
+      console.error("❌ Order API Error:", error);
       throw error;
     }
   };
@@ -147,7 +147,7 @@ export default function CheckoutPage() {
         order_type: "delivery",
       };
 
-      console.log("ðŸ“¦ Creating order with data:", orderData);
+      console.log("📦 Creating order with data:", orderData);
 
       let orderResult;
 
@@ -160,7 +160,7 @@ export default function CheckoutPage() {
             throw new Error(orderResult.message || "API returned unsuccessful");
           }
         } catch (apiError) {
-          console.error("âŒ API order creation failed:", apiError);
+          console.error("❌ API order creation failed:", apiError);
           // Fallback to localStorage
           orderResult = {
             success: true,
@@ -188,14 +188,14 @@ export default function CheckoutPage() {
       localStorage.setItem("lastOrderNumber", createdOrder.orderNumber);
 
       console.log(
-        "âœ… Order created, navigating to confirmation page with orderId:",
+        "✅ Order created, navigating to confirmation page with orderId:",
         createdOrder.id,
       );
 
       // Navigate to order confirmation with order ID
       navigate(`/order-confirmation/${createdOrder.id}`);
     } catch (error) {
-      console.error("âŒ Error placing order:", error);
+      console.error("❌ Error placing order:", error);
       alert(`Failed to place order: ${error.message}`);
     } finally {
       setIsPlacingOrder(false);
@@ -244,7 +244,7 @@ export default function CheckoutPage() {
   if (!cartItems || cartItems.length === 0) {
     return (
       <div className="max-w-2xl mx-auto p-8 text-center">
-        <div className="text-6xl mb-4">ðŸ›’</div>
+        <div className="text-6xl mb-4">🛒</div>
         <h1 className="text-2xl font-bold mb-3 text-gray-800">
           Your cart is empty
         </h1>
@@ -265,11 +265,11 @@ export default function CheckoutPage() {
     <div className="max-w-5xl mx-auto p-4 md:p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
-          ðŸ›’ Checkout
+          🛒 Checkout
         </h1>
         {!apiAvailable && (
           <div className="text-sm bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full">
-            âš ï¸ Offline Mode
+            ⚠️ Offline Mode
           </div>
         )}
       </div>
@@ -281,7 +281,7 @@ export default function CheckoutPage() {
           <div className="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-gray-200">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                <span className="text-blue-600 text-lg">ðŸ‘¤</span>
+                <span className="text-blue-600 text-lg">👤</span>
               </div>
               <h2 className="text-xl font-semibold text-gray-800">
                 Contact Information
@@ -309,7 +309,7 @@ export default function CheckoutPage() {
           <div className="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-gray-200">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                <span className="text-green-600 text-lg">ðŸ“</span>
+                <span className="text-green-600 text-lg">📍</span>
               </div>
               <h2 className="text-xl font-semibold text-gray-800">
                 Delivery Address *
@@ -329,7 +329,7 @@ export default function CheckoutPage() {
           <div className="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-gray-200">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                <span className="text-purple-600 text-lg">ðŸ’³</span>
+                <span className="text-purple-600 text-lg">💳</span>
               </div>
               <h2 className="text-xl font-semibold text-gray-800">
                 Payment Method
@@ -337,9 +337,9 @@ export default function CheckoutPage() {
             </div>
             <div className="space-y-3">
               {[
-                { value: "card", label: "Credit/Debit Card", icon: "ðŸ’³" },
-                { value: "online", label: "Online-Payment", icon: "ðŸŒ" },
-                { value: "cod", label: "Cash on Delivery", icon: "ðŸ’°" },
+                { value: "card", label: "Credit/Debit Card", icon: "💳" },
+                { value: "online", label: "Online Payment", icon: "🌐" },
+                { value: "cod", label: "Cash on Delivery", icon: "💰" },
               ].map((method) => (
                 <label
                   key={method.value}
@@ -371,7 +371,7 @@ export default function CheckoutPage() {
           <div className="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-gray-200">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                <span className="text-gray-600 text-lg">ðŸ“</span>
+                <span className="text-gray-600 text-lg">📝</span>
               </div>
               <h2 className="text-xl font-semibold text-gray-800">
                 Additional Notes
@@ -393,7 +393,7 @@ export default function CheckoutPage() {
             <div className="p-5 md:p-6">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                  <span className="text-orange-600 text-lg">ðŸ§¾</span>
+                  <span className="text-orange-600 text-lg">🧾</span>
                 </div>
                 <h2 className="text-xl font-semibold text-gray-800">
                   Order Summary
@@ -480,7 +480,7 @@ export default function CheckoutPage() {
                   {/* Delivery Info */}
                   <div className="mb-6 p-3 bg-blue-50 rounded-lg">
                     <div className="flex items-center gap-2 text-blue-700">
-                      <span className="text-lg">ðŸšš</span>
+                      <span className="text-lg">🚚</span>
                       <div className="text-sm">
                         <div className="font-medium">
                           Estimated delivery time: 30-45 mins
@@ -496,7 +496,7 @@ export default function CheckoutPage() {
                   {!apiAvailable && (
                     <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                       <div className="flex items-center gap-2 text-yellow-700">
-                        <span className="text-lg">âš ï¸</span>
+                        <span className="text-lg">⚠️</span>
                         <div className="text-sm">
                           <div className="font-medium">Offline Mode</div>
                           <div>Your order will be saved locally</div>

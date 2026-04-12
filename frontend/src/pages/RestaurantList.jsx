@@ -42,7 +42,7 @@ export default function RestaurantList() {
   return (
     <div className="max-w-6xl mx-auto p-6">
       <h1 className="text-3xl font-bold mb-6 text-gray-800">
-        ðŸ´ All Restaurants
+        🍴 All Restaurants
       </h1>
 
       {/* Search */}
@@ -94,7 +94,7 @@ export default function RestaurantList() {
                   {r.rating && (
                     <div className="flex items-center bg-yellow-50 px-2 py-1 rounded">
                       <span className="text-yellow-500 text-sm font-bold">
-                        â˜… {r.rating}
+                        ★ {r.rating}
                       </span>
                     </div>
                   )}
@@ -106,9 +106,9 @@ export default function RestaurantList() {
 
                 <div className="flex items-center text-sm text-gray-500 mb-3">
                   <span className="mr-3">
-                    ðŸ“ {r.location || "City location"}
+                    📍 {r.location || "City location"}
                   </span>
-                  {r.delivery_time && <span>â±ï¸ {r.delivery_time} min</span>}
+                  {r.delivery_time && <span>⏱️ {r.delivery_time} min</span>}
                 </div>
 
                 <div className="flex justify-between items-center">
@@ -122,7 +122,7 @@ export default function RestaurantList() {
                     )}
                   </div>
                   <button className="text-sm font-medium text-blue-600 hover:text-blue-800">
-                    View Menu â†’
+                    View Menu →
                   </button>
                 </div>
               </div>
@@ -132,7 +132,7 @@ export default function RestaurantList() {
       ) : (
         !loading && (
           <div className="text-center py-10">
-            <div className="text-5xl mb-4">ðŸ½ï¸</div>
+            <div className="text-5xl mb-4">🍽️</div>
             <p className="text-gray-500 text-lg">No restaurants found</p>
             <p className="text-gray-400">Try searching for something else</p>
           </div>
@@ -147,7 +147,7 @@ export default function RestaurantList() {
             disabled={page === 1}
             className="px-5 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition font-medium"
           >
-            â† Previous
+            ← Previous
           </button>
           <span className="font-semibold text-gray-700">
             Page {page} of {Math.ceil(totalCount / limit)}
@@ -157,7 +157,7 @@ export default function RestaurantList() {
             disabled={page >= Math.ceil(totalCount / limit)}
             className="px-5 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition font-medium"
           >
-            Next â†’
+            Next →
           </button>
         </div>
       )}

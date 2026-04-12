@@ -129,7 +129,7 @@ export const DealsPage = () => {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <div className="text-center py-12">
-          <div className="text-5xl mb-4">âš ï¸</div>
+          <div className="text-5xl mb-4">⚠️</div>
           <h3 className="text-xl font-semibold text-gray-700 mb-2">
             Failed to load deals
           </h3>
@@ -151,7 +151,7 @@ export const DealsPage = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
             <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900">
-              ðŸ”¥ Hot Deals & Combos
+              🔥 Hot Deals & Combos
             </h1>
             <p className="text-gray-600 mt-2">
               Customizable pizza, burger, and combo deals from top restaurants
@@ -168,14 +168,14 @@ export const DealsPage = () => {
               className="w-full px-4 py-2 pl-10 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             />
             <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-              ðŸ”
+              🔍
             </div>
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm("")}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
-                âœ•
+                ✕
               </button>
             )}
           </div>
@@ -201,7 +201,7 @@ export const DealsPage = () => {
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
-            ðŸ• Pizza ({pizzaDeals})
+            🍕 Pizza ({pizzaDeals})
           </button>
           <button
             onClick={() => setSelectedCategory("burger")}
@@ -211,7 +211,7 @@ export const DealsPage = () => {
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
-            ðŸ” Burger ({burgerDeals})
+            🍔 Burger ({burgerDeals})
           </button>
           <button
             onClick={() => setSelectedCategory("combo")}
@@ -221,7 +221,7 @@ export const DealsPage = () => {
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
-            ðŸ½ï¸ Combo ({comboDeals})
+            🍽️ Combo ({comboDeals})
           </button>
           <button
             onClick={() => setSelectedCategory("customizable")}
@@ -231,7 +231,7 @@ export const DealsPage = () => {
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
-            âš™ï¸ Customizable ({customizableDeals})
+            ⚙️ Customizable ({customizableDeals})
           </button>
           <button
             onClick={() => setSelectedCategory("high-discount")}
@@ -241,7 +241,7 @@ export const DealsPage = () => {
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
-            ðŸ”¥ 50%+ Off
+            🔥 50%+ Off
           </button>
         </div>
 
@@ -284,7 +284,7 @@ export const DealsPage = () => {
       {/* Deals Grid */}
       {filteredDeals.length === 0 ? (
         <div className="text-center py-12">
-          <div className="text-5xl mb-4">ðŸ˜”</div>
+          <div className="text-5xl mb-4">😞</div>
           <h3 className="text-xl font-semibold text-gray-700 mb-2">
             No deals found
           </h3>
@@ -351,5 +351,3 @@ export const DealsPage = () => {
     </div>
   );
 };
-
-

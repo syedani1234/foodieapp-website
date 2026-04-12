@@ -1,4 +1,4 @@
-﻿  // src/components/CuisineCard.jsx
+  // src/components/CuisineCard.jsx
 import { useFavoritesStore } from "../store/FavoritesStore";
 import { Card, CardMedia, CardContent, Typography, IconButton } from "@mui/material";
 import { Favorite, FavoriteBorder } from "@mui/icons-material";

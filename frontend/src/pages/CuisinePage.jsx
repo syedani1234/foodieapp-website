@@ -656,7 +656,7 @@ export const CuisinesPage = () => {
           {/* Copyright */}
           <Box sx={{ textAlign: 'center', pt: 2 }}>
             <Typography variant="body2" color="text.secondary">
-              Â© {new Date().getFullYear()} Food Explorer. All rights reserved.
+              © {new Date().getFullYear()} Food Explorer. All rights reserved.
             </Typography>
             <Stack direction="row" spacing={2} justifyContent="center" sx={{ mt: 1 }}>
               <Typography variant="caption" color="text.secondary">
@@ -678,5 +678,3 @@ export const CuisinesPage = () => {
     </Container>
   );
 };
-
-

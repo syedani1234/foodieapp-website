@@ -97,7 +97,7 @@ export default function RestaurantDetailsPage() {
               </span>
               {restaurant.rating && (
                 <span className="flex items-center">
-                  <span className="text-yellow-300 mr-1">â˜…</span>
+                  <span className="text-yellow-300 mr-1">★</span>
                   <span className="font-medium">{restaurant.rating}</span>
                 </span>
               )}
@@ -109,7 +109,7 @@ export default function RestaurantDetailsPage() {
           <div className="bg-gray-50 p-4 rounded-lg">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                <span className="text-blue-600">ðŸ“</span>
+                <span className="text-blue-600">📍</span>
               </div>
               <div>
                 <p className="font-medium text-gray-800">Location</p>
@@ -121,7 +121,7 @@ export default function RestaurantDetailsPage() {
           <div className="bg-gray-50 p-4 rounded-lg">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                <span className="text-green-600">â±ï¸</span>
+                <span className="text-green-600">⏱️</span>
               </div>
               <div>
                 <p className="font-medium text-gray-800">Delivery Time</p>
@@ -135,7 +135,7 @@ export default function RestaurantDetailsPage() {
           <div className="bg-gray-50 p-4 rounded-lg">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                <span className="text-purple-600">ðŸ’°</span>
+                <span className="text-purple-600">💰</span>
               </div>
               <div>
                 <p className="font-medium text-gray-800">Delivery Fee</p>
@@ -259,7 +259,7 @@ export default function RestaurantDetailsPage() {
                                 }`}
                               >
                                 <span>
-                                  {isFavorite(item.id) ? "â¤ï¸" : "ðŸ¤"}
+                                  {isFavorite(item.id) ? "❤️" : "🤍"}
                                 </span>
                                 <span>
                                   {isFavorite(item.id) ? "Added" : "Favorite"}
@@ -287,7 +287,7 @@ export default function RestaurantDetailsPage() {
           ))
         ) : (
           <div className="text-center py-10 bg-gray-50 rounded-xl">
-            <div className="text-5xl mb-4">ðŸ½ï¸</div>
+            <div className="text-5xl mb-4">🍽️</div>
             <p className="text-gray-500 text-lg">No menu available</p>
             <p className="text-gray-400">Check back later for updates</p>
           </div>
@@ -300,7 +300,7 @@ export default function RestaurantDetailsPage() {
           onClick={() => navigate("/restaurants")}
           className="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium"
         >
-          <span>â†</span>
+          <span>←</span>
           <span>Back to Restaurants</span>
         </button>
       </div>

@@ -1,4 +1,4 @@
-﻿// src/components/DealCard.jsx - UPDATED VERSION
+// src/components/DealCard.jsx - CORRECTED
 import { useCart } from "../context/CartContext";
 import { useState } from "react";
 import { 
@@ -54,7 +54,6 @@ export const DealCard = ({ deal, onFavoriteToggle, isFavorite }) => {
     const description = (deal.description || "").toLowerCase();
     const tags = (deal.tags || "").toLowerCase();
     
-    // Pizza deals, burger deals, and combos are customizable
     const hasPizza = title.includes('pizza') || description.includes('pizza') || tags.includes('pizza');
     const hasBurger = title.includes('burger') || description.includes('burger') || tags.includes('burger');
     const hasCombo = title.includes('combo') || description.includes('combo') || tags.includes('combo');
@@ -83,7 +82,7 @@ export const DealCard = ({ deal, onFavoriteToggle, isFavorite }) => {
 
   // Get button text
   const getButtonText = () => {
-    if (added) return 'âœ“ Added';
+    if (added) return '✓ Added';
     
     if (!isCustomizable()) {
       return 'Add to Cart';
@@ -105,15 +104,15 @@ export const DealCard = ({ deal, onFavoriteToggle, isFavorite }) => {
   const getDealIcon = () => {
     switch (dealType) {
       case 'pizza':
-        return 'ðŸ•';
+        return '🍕';
       case 'burger':
-        return 'ðŸ”';
+        return '🍔';
       case 'pizza-burger-combo':
-        return 'ðŸ•ðŸ”';
+        return '🍕🍔';
       case 'combo':
-        return 'ðŸ½ï¸';
+        return '🍽️';
       default:
-        return 'ðŸ”¥';
+        return '🔥';
     }
   };
 
@@ -136,7 +135,6 @@ export const DealCard = ({ deal, onFavoriteToggle, isFavorite }) => {
   // Handle add to cart
   const handleAddToCart = () => {
     if (!isCustomizable()) {
-      // Add directly to cart for non-customizable deals
       const dealItem = {
         id: deal.id,
         name: deal.title || deal.name,
@@ -159,12 +157,10 @@ export const DealCard = ({ deal, onFavoriteToggle, isFavorite }) => {
       setAdded(true);
       setTimeout(() => setAdded(false), 1500);
     } else {
-      // Open customization dialog
       setOpenDealDialog(true);
     }
   };
 
-  // Handle customization completion
   const handleCustomizationComplete = (customizedData) => {
     const dealItem = {
       id: deal.id,
@@ -332,7 +328,7 @@ export const DealCard = ({ deal, onFavoriteToggle, isFavorite }) => {
           {/* Customization Info */}
           {isCustomizable() && (
             <Typography variant="caption" className="block text-center mt-2 text-blue-600">
-              âœ“ Click to customize
+              ✓ Click to customize
             </Typography>
           )}
         </div>
@@ -350,5 +346,3 @@ export const DealCard = ({ deal, onFavoriteToggle, isFavorite }) => {
     </>
   );
 };
-
-

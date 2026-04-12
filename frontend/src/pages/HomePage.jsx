@@ -149,7 +149,7 @@ export const HomePage = () => {
         <div className="relative z-10 flex flex-col md:flex-row gap-8 items-center">
           <div className="flex-1 text-white">
             <h1 className="text-4xl md:text-6xl font-extrabold mb-4 leading-tight">
-              Discover <span className="text-yellow-300">Amazing</span> Food Deals ðŸ”
+              Discover <span className="text-yellow-300">Amazing</span> Food Deals 🍽️
             </h1>
             <p className="text-xl md:text-2xl mb-8 opacity-90">
               Get up to {dealStats.maxDiscount}% off on your favorite restaurants. Order now for fast delivery!
@@ -279,7 +279,7 @@ export const HomePage = () => {
             <LocalFireDepartment className="text-4xl text-orange-500" />
             <div>
               <Typography variant="h4" fontWeight="bold" className="text-gray-800">
-                ðŸ”¥ Today's Hot Deals
+                🔥 Today's Hot Deals
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 {deals?.length || 0} deals available with amazing discounts
@@ -400,7 +400,7 @@ export const HomePage = () => {
       <section className="space-y-6">
         <div className="flex justify-between items-center">
           <Typography variant="h4" fontWeight="bold" className="text-gray-800">
-            ðŸ´ Explore Cuisines
+            🍴 Explore Cuisines
           </Typography>
           <Button
             component={Link}
@@ -449,7 +449,7 @@ export const HomePage = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <Typography variant="h4" fontWeight="bold" className="text-gray-800 mb-2">
-              ðŸª Top Restaurants Near You
+              🏪 Top Restaurants Near You
             </Typography>
             <Typography variant="body2" color="text.secondary">
               {total} restaurants {selectedCuisine ? `serving ${selectedCuisine}` : 'available'}
@@ -541,5 +541,3 @@ export const HomePage = () => {
     </div>
   );
 };
-
-

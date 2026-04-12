@@ -1,4 +1,5 @@
-﻿import API_BASE_URL from "../config/api";
+﻿// src/pages/OrderConfirmationPage.jsx
+import API_BASE_URL from "../config/api";
 import React, { useEffect, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -90,7 +91,7 @@ import {
 const formatCurrency = (amount, defaultValue = "0.00") => {
   if (amount === null || amount === undefined) return defaultValue;
   const num = typeof amount === "string" ? parseFloat(amount) : amount;
-  return !isNaN(num) ? `â‚¹${num.toFixed(2)}` : defaultValue;
+  return !isNaN(num) ? `₹${num.toFixed(2)}` : defaultValue;
 };
 
 // Helper function to safely get number
@@ -122,14 +123,14 @@ export default function OrderConfirmationPage() {
     const lastOrderId = localStorage.getItem("lastOrderId");
     const lastOrderNumber = localStorage.getItem("lastOrderNumber");
 
-    console.log(`ðŸ“Š OrderConfirmationPage mounted`);
+    console.log(`📊 OrderConfirmationPage mounted`);
     console.log(`- URL orderId: ${orderId}`);
     console.log(`- localStorage ID: ${lastOrderId}`);
     console.log(`- localStorage Number: ${lastOrderNumber}`);
 
     // If no orderId in URL but we have saved data, redirect with that ID
     if (!orderId && lastOrderId) {
-      console.log(`ðŸ”„ Redirecting to saved order ID: ${lastOrderId}`);
+      console.log(`🔄 Redirecting to saved order ID: ${lastOrderId}`);
       navigate(`/order-confirmation/${lastOrderId}`, { replace: true });
       return;
     }
@@ -157,7 +158,7 @@ export default function OrderConfirmationPage() {
     setError(null);
 
     try {
-      console.log(`ðŸ” Starting to load order data...`);
+      console.log(`🔍 Starting to load order data...`);
 
       let orderData = null;
       let dataSource = "unknown";
@@ -185,7 +186,7 @@ export default function OrderConfirmationPage() {
       for (const source of sources) {
         if (!source.condition || orderData) continue;
 
-        console.log(`ðŸ“¡ Attempting: ${source.name}`);
+        console.log(`📡 Attempting: ${source.name}`);
         try {
           const response = await fetch(source.url);
           const data = await response.json();
@@ -251,7 +252,7 @@ export default function OrderConfirmationPage() {
 
       // Set order data
       if (orderData) {
-        console.log(`âœ… Order data loaded from: ${dataSource}`);
+        console.log(`✅ Order data loaded from: ${dataSource}`);
         setOrderDetails(orderData);
         setDebugResults(debugLog);
 
@@ -264,7 +265,7 @@ export default function OrderConfirmationPage() {
         throw new Error("Could not load order from any source");
       }
     } catch (err) {
-      console.error("âŒ Error loading order:", err);
+      console.error("❌ Error loading order:", err);
       setError(err.message);
 
       setSnackbar({
@@ -342,7 +343,7 @@ export default function OrderConfirmationPage() {
   };
 
   const runDatabaseDiagnostics = async () => {
-    console.log("ðŸ§ª Running database diagnostics...");
+    console.log("🧪 Running database diagnostics...");
 
     const tests = [];
 
@@ -446,7 +447,7 @@ export default function OrderConfirmationPage() {
 
   const handleShare = (platform) => {
     const order = orderDetails;
-    const shareText = `ðŸŽ‰ Just ordered from ${order.restaurant.name}!\nOrder #${order.orderNumber}\nTotal: ${formatCurrency(order.totalAmount)}\nStatus: ${order.status}\nEstimated Delivery: ${order.estimatedDeliveryTime}`;
+    const shareText = `🎉 Just ordered from ${order.restaurant.name}!\nOrder #${order.orderNumber}\nTotal: ${formatCurrency(order.totalAmount)}\nStatus: ${order.status}\nEstimated Delivery: ${order.estimatedDeliveryTime}`;
 
     let url = "";
     switch (platform) {
@@ -502,7 +503,7 @@ ${order.deliveryAddress}
 Estimated Delivery: ${order.estimatedDeliveryTime}
 
 ORDER ITEMS:
-${order.items.map((item) => `  â€¢ ${item.quantity}x ${item.name} - ${formatCurrency(item.total)}`).join("\n")}
+${order.items.map((item) => `  • ${item.quantity}x ${item.name} - ${formatCurrency(item.total)}`).join("\n")}
 
 PRICE BREAKDOWN:
   Subtotal: ${formatCurrency(order.breakdown.subtotal)}
@@ -514,7 +515,7 @@ PRICE BREAKDOWN:
 Payment Method: ${order.paymentMethod}
 
 Thank you for ordering with Foodie App!
-We hope you enjoy your meal! ðŸ•ðŸ”ðŸ
+We hope you enjoy your meal! 🍕🍔🍝
 
 ========================================
     `.trim();
@@ -658,7 +659,7 @@ We hope you enjoy your meal! ðŸ•ðŸ”ðŸ
           color="success.main"
           gutterBottom
         >
-          Order Confirmed! ðŸŽ‰
+          Order Confirmed! 🎉
         </Typography>
         <Typography
           variant="h6"
@@ -666,7 +667,7 @@ We hope you enjoy your meal! ðŸ•ðŸ”ðŸ
           gutterBottom
           sx={{ mb: 3 }}
         >
-          Your food is being prepared with love â¤ï¸
+          Your food is being prepared with love ❤️
         </Typography>
 
         <Paper
@@ -1295,7 +1296,7 @@ We hope you enjoy your meal! ðŸ•ðŸ”ðŸ
                   secondary={
                     <>
                       <Typography variant="body2">
-                        Status: {result.status} {result.success ? "âœ…" : "âŒ"}
+                        Status: {result.status} {result.success ? "✅" : "❌"}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
                         {result.message}

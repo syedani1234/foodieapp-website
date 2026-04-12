@@ -1,6 +1,4 @@
-﻿
-   // src/pages/TrackOrderPage.jsx
-import { useParams, Link } from "react-router-dom";
+﻿import { useParams, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 
@@ -9,13 +7,13 @@ export default function TrackOrderPage() {
   const [statusIndex, setStatusIndex] = useState(0);
 
   const statuses = [
-    { label: "Order Placed", icon: "ðŸ§¾" },
-    { label: "Preparing Food", icon: "ðŸ‘¨â€ðŸ³" },
-    { label: "Out for Delivery", icon: "ðŸš´â€â™‚ï¸" },
-    { label: "Delivered", icon: "âœ…" },
+    { label: "Order Placed", icon: "🧾" },
+    { label: "Preparing Food", icon: "👨‍🍳" },
+    { label: "Out for Delivery", icon: "🚴‍♂️" },
+    { label: "Delivered", icon: "✅" },
   ];
 
-  // â³ Simulate status progress automatically
+  // Simulate status progress automatically
   useEffect(() => {
     window.scrollTo(0, 0);
     const interval = setInterval(() => {
@@ -25,7 +23,7 @@ export default function TrackOrderPage() {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [statuses.length]); // âœ… fixed ESLint warning
+  }, [statuses.length]);
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-10">
@@ -36,7 +34,7 @@ export default function TrackOrderPage() {
         className="text-center mb-10"
       >
         <h1 className="text-3xl font-bold text-green-600 mb-2">
-          ðŸšš Track Your Order
+          🚚 Track Your Order
         </h1>
         <p className="text-gray-600">Order ID: #{orderId}</p>
       </motion.div>
@@ -99,7 +97,7 @@ export default function TrackOrderPage() {
           Estimated Delivery Time:
         </p>
         <p className="text-2xl font-bold text-gray-800">
-          30â€“40 minutes â±ï¸
+          30–40 minutes ⏱️
         </p>
       </motion.div>
 
@@ -109,18 +107,16 @@ export default function TrackOrderPage() {
           to="/"
           className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition shadow-md"
         >
-          â¬… Back to Home
+          ⬅️ Back to Home
         </Link>
 
         <Link
           to="/orders"
           className="bg-gray-200 text-gray-800 px-6 py-3 rounded-lg font-semibold hover:bg-gray-300 transition shadow-md"
         >
-          ðŸ” Track Another Order
+          🔁 Track Another Order
         </Link>
       </div>
     </div>
   );
 }
-
-

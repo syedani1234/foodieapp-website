@@ -1,4 +1,4 @@
-﻿import API_BASE_URL from "../config/api";
+import API_BASE_URL from "../config/api";
 
 // src/components/DealDialog.jsx - COMPLETELY UPDATED AND FIXED
 import React, { useState, useEffect } from "react";
@@ -786,8 +786,6 @@ const DealDialog = ({
                       onClick={() => handleSizeChange(item.id, size.id)}
                     >
                       <CardContent sx={{ textAlign: "center", py: 2 }}>
-                        {" "}
-                        {/* Fixed line */}
                         <Typography variant="subtitle2" fontWeight="bold">
                           {size.name}
                         </Typography>
@@ -1091,7 +1089,7 @@ const DealDialog = ({
 
                 <Box display="flex" justifyContent="space-between" mb={1}>
                   <Typography variant="body1">Quantity:</Typography>
-                  <Typography variant="body1">Ã— {dealQuantity}</Typography>
+                  <Typography variant="body1">× {dealQuantity}</Typography>
                 </Box>
 
                 <Divider sx={{ my: 1 }} />
@@ -1276,14 +1274,14 @@ const DealDialog = ({
                     >
                       <Box flex={1}>
                         <Typography variant="subtitle2" fontWeight="bold">
-                          {item.name} Ã— {dealQuantity}
+                          {item.name} × {dealQuantity}
                         </Typography>
 
                         <Box ml={2} mt={1}>
                           {/* Size */}
                           {itemCustomization.selectedSize && (
                             <Typography variant="body2" color="text.secondary">
-                              â€¢ Size:{" "}
+                              • Size:{" "}
                               {itemCustomization.selectedSize.toUpperCase()}
                             </Typography>
                           )}
@@ -1295,7 +1293,7 @@ const DealDialog = ({
                                 variant="body2"
                                 color="text.secondary"
                               >
-                                â€¢ Crust: {itemCustomization.selectedCrust}
+                                • Crust: {itemCustomization.selectedCrust}
                               </Typography>
                             )}
 
@@ -1307,7 +1305,7 @@ const DealDialog = ({
                                 variant="body2"
                                 color="text.secondary"
                               >
-                                â€¢ Toppings:{" "}
+                                • Toppings:{" "}
                                 {itemCustomization.selectedToppings
                                   .map((toppingId) => {
                                     const topping =
@@ -1329,7 +1327,7 @@ const DealDialog = ({
                                 variant="body2"
                                 color="text.secondary"
                               >
-                                â€¢ Extras:{" "}
+                                • Extras:{" "}
                                 {itemCustomization.selectedAddons
                                   .map((addonId) => {
                                     const addon = item.options?.addons?.find(

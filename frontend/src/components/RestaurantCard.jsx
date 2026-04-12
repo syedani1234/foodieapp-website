@@ -1,4 +1,4 @@
-﻿// src/components/RestaurantCard.jsx
+// src/components/RestaurantCard.jsx
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -44,7 +44,7 @@ export const RestaurantCard = ({ restaurant, onFavoriteToggle, isFavorite, onDea
     }
     
     // If it's a number, format it
-    return `â‚¹${parseFloat(fee).toFixed(2)} delivery`;
+    return `₹${parseFloat(fee).toFixed(2)} delivery`;
   };
 
   // Format rating display
@@ -55,7 +55,7 @@ export const RestaurantCard = ({ restaurant, onFavoriteToggle, isFavorite, onDea
     
     const ratingNum = parseFloat(rating);
     return { 
-      display: `${ratingNum.toFixed(1)} â­`, 
+      display: `${ratingNum.toFixed(1)} ⭐`, 
       value: ratingNum, 
       hasRating: true 
     };
@@ -82,7 +82,7 @@ export const RestaurantCard = ({ restaurant, onFavoriteToggle, isFavorite, onDea
   const formatMinOrder = (amount) => {
     if (!amount || amount === 0) return "No minimum";
     if (typeof amount === 'string' && amount.toLowerCase().includes('no')) return "No minimum";
-    return `Min. â‚¹${parseFloat(amount).toFixed(2)}`;
+    return `Min. ₹${parseFloat(amount).toFixed(2)}`;
   };
 
   // Get status text and color
@@ -482,5 +482,3 @@ RestaurantCard.defaultProps = {
   onFavoriteToggle: () => {},
   onDealClick: () => {}
 };
-
-

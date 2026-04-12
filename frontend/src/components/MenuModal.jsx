@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useCart } from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
 import { formatImageUrl } from "../utils/formatImageUrl";
@@ -336,7 +336,7 @@ export default function MenuModal({
             onClick={onClose}
             className="absolute top-4 right-4 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center text-gray-700 hover:bg-white hover:text-red-500 transition-all shadow-lg"
           >
-            <span className="text-xl font-bold">Ã—</span>
+            <span className="text-xl font-bold">×</span>
           </button>
 
           {/* Favorite button */}
@@ -344,7 +344,7 @@ export default function MenuModal({
             onClick={handleFavoriteToggle}
             className="absolute top-4 left-4 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-all"
           >
-            <span className="text-xl">{isFav ? "â¤ï¸" : "ðŸ¤"}</span>
+            <span className="text-xl">{isFav ? "❤️" : "🤍"}</span>
           </button>
         </div>
 
@@ -594,7 +594,7 @@ export default function MenuModal({
                   disabled={quantity <= 1}
                   className="w-10 h-10 flex items-center justify-center bg-white border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
-                  <span className="text-xl">âˆ’</span>
+                  <span className="text-xl">−</span>
                 </button>
                 <span className="text-2xl font-bold text-gray-800 min-w-[2rem] text-center">
                   {quantity}
@@ -659,7 +659,7 @@ export default function MenuModal({
                       : "bg-gray-300 text-gray-500 cursor-not-allowed"
                   }`}
                 >
-                  {isEditing ? "ðŸ”„ Update Item" : "ðŸ›’ Add to Cart"}
+                  {isEditing ? "🔄 Update Item" : "🛒 Add to Cart"}
                 </button>
               </div>
             </div>
@@ -678,7 +678,7 @@ export default function MenuModal({
               {/* Size */}
               {selectedSize && selectedSize !== "medium" && (
                 <div>
-                  â€¢ Size:{" "}
+                  • Size:{" "}
                   {selectedSize.charAt(0).toUpperCase() + selectedSize.slice(1)}
                 </div>
               )}
@@ -686,7 +686,7 @@ export default function MenuModal({
               {/* Variations */}
               {Object.values(selectedVariations).map((v, idx) => (
                 <div key={idx}>
-                  â€¢ {v.label}: {v.price > 0 ? `+Rs. ${v.price}` : "Included"}
+                  • {v.label}: {v.price > 0 ? `+Rs. ${v.price}` : "Included"}
                 </div>
               ))}
 
@@ -694,21 +694,21 @@ export default function MenuModal({
               {isDealItem &&
                 Object.values(selectedDealOptions).map((opt, idx) => (
                   <div key={idx}>
-                    â€¢ {opt.name}:{" "}
+                    • {opt.name}:{" "}
                     {opt.price > 0 ? `+Rs. ${opt.price}` : "Included"}
                   </div>
                 ))}
 
               {/* Regular item options */}
-              {selectedCrust && <div>â€¢ Crust: {selectedCrust.name}</div>}
+              {selectedCrust && <div>• Crust: {selectedCrust.name}</div>}
               {selectedToppings.length > 0 && (
                 <div>
-                  â€¢ Toppings: {selectedToppings.map((t) => t.name).join(", ")}
+                  • Toppings: {selectedToppings.map((t) => t.name).join(", ")}
                 </div>
               )}
               {selectedAddOns.length > 0 && (
                 <div>
-                  â€¢ Add-ons: {selectedAddOns.map((a) => a.name).join(", ")}
+                  • Add-ons: {selectedAddOns.map((a) => a.name).join(", ")}
                 </div>
               )}
             </div>

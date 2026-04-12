@@ -1,4 +1,3 @@
-﻿   // src/components/Navbar.jsx
 import { Link, useLocation } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useState } from "react";
@@ -8,10 +7,9 @@ export default function Navbar() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const location = useLocation();
 
-  // âœ… List of cuisines
+  // List of cuisines
   const cuisines = ["Italian", "Fast Food", "Indian"];
 
-  // Function to check active link
   const isActive = (path) => location.pathname === path;
 
   return (
@@ -23,7 +21,7 @@ export default function Navbar() {
           to="/"
           className="text-2xl font-bold text-blue-500 hover:text-blue-400"
         >
-          ðŸ´ FoodieApp
+          🍴 FoodieApp
         </Link>
 
         {/* Navigation Links */}
@@ -58,7 +56,7 @@ export default function Navbar() {
             <button
               className="hover:text-blue-400 flex items-center gap-1"
             >
-              Cuisines â–¼
+              Cuisines ▼
             </button>
             {dropdownOpen && (
               <div className="absolute top-full left-0 mt-2 bg-white text-black rounded shadow-lg w-40 z-50">
@@ -88,7 +86,7 @@ export default function Navbar() {
           to="/cart"
           className="relative bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
         >
-          ðŸ›’ Cart
+          🛒 Cart
           {cartItems.length > 0 && (
             <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full px-2 py-0.5">
               {cartItems.length}
@@ -99,5 +97,3 @@ export default function Navbar() {
     </header>
   );
 };
-
-

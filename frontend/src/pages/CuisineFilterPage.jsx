@@ -531,7 +531,7 @@ export default function CuisineFilterPage() {
                 }
                 sx={{ mt: 2, textTransform: "none" }}
               >
-                Learn more about {cuisine.name} cuisine â†’
+                Learn more about {cuisine.name} cuisine →
               </Button>
             </Grid>
 
