@@ -97,8 +97,16 @@ let pool;
 
 // If DATABASE_URL is provided (production), use it
 if (process.env.DATABASE_URL) {
-  pool = mysql.createPool(process.env.DATABASE_URL);
-  console.log("✅ Using DATABASE_URL for connection");
+  // For TiDB Cloud, we need to enforce SSL
+  // The URL already contains ?ssl-mode=REQUIRED, but mysql2 requires explicit ssl option
+  pool = mysql.createPool({
+    uri: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }, // Accept self-signed certificates (TiDB Cloud uses valid CA, but this works)
+    enableKeepAlive: true,
+    connectionLimit: 20,
+    waitForConnections: true,
+  });
+  console.log("✅ Using DATABASE_URL for connection (with SSL)");
 } else {
   // Fallback to individual DB_ variables (local development)
   pool = mysql.createPool({
@@ -115,18 +123,6 @@ if (process.env.DATABASE_URL) {
     ...(process.env.DB_SSL === "true" && { ssl: { rejectUnauthorized: false } }),
   });
   console.log("✅ Using individual DB_ variables for connection");
-}
-// Test database connection
-async function testDatabaseConnection() {
-  try {
-    const connection = await pool.getConnection();
-    console.log("✅ Database connection successful");
-    connection.release();
-    return true;
-  } catch (error) {
-    console.error("❌ Database connection failed:", error.message);
-    return false;
-  }
 }
 
 /* =========================
