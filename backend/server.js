@@ -5,9 +5,18 @@ import path from "path";
 import fs from "fs";
 import multer from "multer";
 import { fileURLToPath } from "url";
+import { v2 as cloudinary } from 'cloudinary';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
+
+// Cloudinary configuration
+cloudinary.config({
+  cloud_name: 'dppoj8vb3',
+  api_key: '848759657246974',
+  api_secret: 'sZ_TfhP1ny-09Eo6SO9TnROXVk8',
+});
 
 /* =========================
    MIDDLEWARE CONFIGURATION
@@ -40,14 +49,21 @@ if (!fs.existsSync(UPLOAD_DIR)) {
   console.log(`📁 Created uploads directory: ${UPLOAD_DIR}`);
 }
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, UPLOAD_DIR);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `img-${uniqueSuffix}${ext}`);
+// Cloudinary storage engine for multer
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'foodieapp', // All images will be stored in this folder in Cloudinary
+    allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+    transformation: [{ width: 500, height: 500, crop: 'limit' }],
+    // Use public_id to set a custom filename
+    public_id: (req, file) => {
+      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+      const ext = path.extname(file.originalname).toLowerCase();
+      // Remove the extension from the public_id (Cloudinary adds it automatically)
+      const baseName = `img-${uniqueSuffix}`;
+      return baseName;
+    }
   },
 });
 
