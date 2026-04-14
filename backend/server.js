@@ -6,16 +6,15 @@ import fs from "fs";
 import multer from "multer";
 import { fileURLToPath } from "url";
 import { v2 as cloudinary } from 'cloudinary';
-import pkg from 'multer-storage-cloudinary';
-const { CloudinaryStorage } = pkg;
+
 const app = express();
 const PORT = process.env.PORT || 4000;
 
 // Cloudinary configuration
 cloudinary.config({
-  cloud_name: 'dppoj8vb3',
-  api_key: '848759657246974',
-  api_secret: 'sZ_TfhP1ny-09Eo6SO9TnROXVk8',
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dppoj8vb3',
+  api_key: process.env.CLOUDINARY_API_KEY || '848759657246974',
+  api_secret: process.env.CLOUDINARY_API_SECRET || 'sZ_TfhP1ny-09Eo6SO9TnROXVk8',
 });
 
 /* =========================
@@ -38,9 +37,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /* =========================
-   FILE UPLOAD CONFIGURATION
+   FILE UPLOAD CONFIGURATION (Memory Storage for Cloudinary)
 ========================= */
-// On Vercel (serverless), only /tmp is writable; use local uploads dir otherwise
 const UPLOAD_DIR = process.env.VERCEL
   ? "/tmp/uploads"
   : path.join(__dirname, "uploads");
@@ -49,23 +47,8 @@ if (!fs.existsSync(UPLOAD_DIR)) {
   console.log(`📁 Created uploads directory: ${UPLOAD_DIR}`);
 }
 
-// Cloudinary storage engine for multer
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'foodieapp', // All images will be stored in this folder in Cloudinary
-    allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
-    transformation: [{ width: 500, height: 500, crop: 'limit' }],
-    // Use public_id to set a custom filename
-    public_id: (req, file) => {
-      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-      const ext = path.extname(file.originalname).toLowerCase();
-      // Remove the extension from the public_id (Cloudinary adds it automatically)
-      const baseName = `img-${uniqueSuffix}`;
-      return baseName;
-    }
-  },
-});
+// Use memory storage (no disk writes)
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
   const allowedTypes = /jpeg|jpg|png|gif|webp/;
@@ -95,7 +78,7 @@ const upload = multer({
 });
 
 /* =========================
-   STATIC FILES
+   STATIC FILES (for local fallback – keep for backward compatibility)
 ========================= */
 app.use(
   "/uploads",
@@ -107,17 +90,31 @@ app.use(
 );
 
 /* =========================
+   HELPER: Upload buffer to Cloudinary
+========================= */
+async function uploadToCloudinary(buffer, folder = 'foodieapp') {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      { folder: folder },
+      (error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      }
+    );
+    uploadStream.end(buffer);
+  });
+}
+
+/* =========================
    DATABASE CONNECTION
 ========================= */
 let pool;
 
 // If DATABASE_URL is provided (production), use it
 if (process.env.DATABASE_URL) {
-  // For TiDB Cloud, we need to enforce SSL
-  // The URL already contains ?ssl-mode=REQUIRED, but mysql2 requires explicit ssl option
   pool = mysql.createPool({
     uri: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }, // Accept self-signed certificates (TiDB Cloud uses valid CA, but this works)
+    ssl: { rejectUnauthorized: false },
     enableKeepAlive: true,
     connectionLimit: 20,
     waitForConnections: true,
@@ -146,11 +143,9 @@ if (process.env.DATABASE_URL) {
 ========================= */
 const formatImageUrl = (imagePath) => {
   if (!imagePath) return null;
-
   if (imagePath.startsWith("http")) {
     return imagePath;
   }
-
   const normalizedPath = imagePath.startsWith("/")
     ? imagePath
     : `/${imagePath}`;
@@ -160,7 +155,6 @@ const formatImageUrl = (imagePath) => {
 
 const slugToName = (slug) => {
   if (!slug || typeof slug !== "string") return "";
-
   return slug
     .split("-")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
@@ -169,7 +163,6 @@ const slugToName = (slug) => {
 
 const nameToSlug = (name) => {
   if (!name || typeof name !== "string") return "";
-
   return name
     .toLowerCase()
     .trim()
@@ -193,7 +186,6 @@ const validateRequiredFields = (fields, data) => {
 
 const formatDateForMySQL = (dateString) => {
   if (!dateString) return null;
-
   try {
     const date = new Date(dateString);
     const year = date.getFullYear();
@@ -202,7 +194,6 @@ const formatDateForMySQL = (dateString) => {
     const hours = String(date.getHours()).padStart(2, "0");
     const minutes = String(date.getMinutes()).padStart(2, "0");
     const seconds = String(date.getSeconds()).padStart(2, "0");
-
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
   } catch (error) {
     return null;
@@ -210,12 +201,11 @@ const formatDateForMySQL = (dateString) => {
 };
 
 /* =========================
-   DATABASE INITIALIZATION WITH COLUMN CHECKING
+   DATABASE INITIALIZATION & COLUMN CHECKING
 ========================= */
 async function initializeDatabase() {
   try {
     console.log("🔧 Initializing database...");
-
     // Create cuisines table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS cuisines (
@@ -229,7 +219,6 @@ async function initializeDatabase() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
-
     // Create restaurants table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS restaurants (
@@ -254,7 +243,6 @@ async function initializeDatabase() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
-
     // Create restaurant_cuisines junction table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS restaurant_cuisines (
@@ -265,7 +253,6 @@ async function initializeDatabase() {
         FOREIGN KEY (cuisine_id) REFERENCES cuisines(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
-
     // Create deals table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS deals (
@@ -293,7 +280,6 @@ async function initializeDatabase() {
         FOREIGN KEY (cuisine_id) REFERENCES cuisines(id) ON DELETE SET NULL
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
-
     // Create menu items table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS menu_items (
@@ -309,7 +295,6 @@ async function initializeDatabase() {
         FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
-
     // Create orders table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS orders (
@@ -328,7 +313,6 @@ async function initializeDatabase() {
         FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE SET NULL
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
-
     // Create order items table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS order_items (
@@ -342,13 +326,8 @@ async function initializeDatabase() {
         FOREIGN KEY (menu_item_id) REFERENCES menu_items(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
-
     console.log("✅ Database tables created/verified");
-
-    // Check and add missing columns
     await checkAndAddMissingColumns();
-
-    // Insert sample data if tables are empty
     await insertSampleData();
   } catch (error) {
     console.error("❌ Database initialization error:", error);
@@ -373,7 +352,6 @@ async function testDatabaseConnection() {
 async function checkAndAddMissingColumns() {
   try {
     console.log("🔍 Checking for missing columns...");
-
     // Check deals table for cuisine_id column
     try {
       const [dealsColumns] = await pool.query(
@@ -384,8 +362,6 @@ async function checkAndAddMissingColumns() {
         await pool.query(
           "ALTER TABLE deals ADD COLUMN cuisine_id INT NULL AFTER restaurant_id",
         );
-
-        // Add foreign key constraint
         try {
           await pool.query(
             "ALTER TABLE deals ADD FOREIGN KEY (cuisine_id) REFERENCES cuisines(id) ON DELETE SET NULL",
@@ -400,7 +376,6 @@ async function checkAndAddMissingColumns() {
     } catch (error) {
       console.log("⚠️  Could not check cuisine_id column:", error.message);
     }
-
     // Check deals table for other missing columns
     const dealColumnsToAdd = [
       { name: "tags", type: "TEXT", after: "valid_until" },
@@ -418,7 +393,6 @@ async function checkAndAddMissingColumns() {
         after: "has_customization",
       },
     ];
-
     for (const column of dealColumnsToAdd) {
       try {
         const [colExists] = await pool.query(
@@ -439,7 +413,6 @@ async function checkAndAddMissingColumns() {
         );
       }
     }
-
     // Check restaurants table for address column
     try {
       const [restaurantColumns] = await pool.query(
@@ -454,7 +427,6 @@ async function checkAndAddMissingColumns() {
     } catch (error) {
       console.log("⚠️  Could not check address column:", error.message);
     }
-
     console.log("✅ Column check completed");
   } catch (error) {
     console.log("⚠️  Could not check/add columns:", error.message);
@@ -464,41 +436,18 @@ async function checkAndAddMissingColumns() {
 // Insert sample data for testing
 async function insertSampleData() {
   try {
-    // Check if cuisines table is empty
     const [cuisineCount] = await pool.query(
       "SELECT COUNT(*) as count FROM cuisines",
     );
     if (cuisineCount[0].count === 0) {
       console.log("📝 Inserting sample cuisines...");
-
       const sampleCuisines = [
-        {
-          name: "Italian",
-          description: "Authentic Italian pasta and pizza",
-          is_featured: true,
-        },
-        {
-          name: "Chinese",
-          description: "Traditional Chinese dishes",
-          is_featured: true,
-        },
-        {
-          name: "Indian",
-          description: "Spicy and flavorful Indian cuisine",
-          is_featured: true,
-        },
-        {
-          name: "Mexican",
-          description: "Tacos, burritos, and more",
-          is_featured: false,
-        },
-        {
-          name: "Fast Food",
-          description: "Burgers, fries, and quick bites",
-          is_featured: true,
-        },
+        { name: "Italian", description: "Authentic Italian pasta and pizza", is_featured: true },
+        { name: "Chinese", description: "Traditional Chinese dishes", is_featured: true },
+        { name: "Indian", description: "Spicy and flavorful Indian cuisine", is_featured: true },
+        { name: "Mexican", description: "Tacos, burritos, and more", is_featured: false },
+        { name: "Fast Food", description: "Burgers, fries, and quick bites", is_featured: true },
       ];
-
       for (const cuisine of sampleCuisines) {
         await pool.query(
           "INSERT IGNORE INTO cuisines (name, description, is_featured) VALUES (?, ?, ?)",
@@ -507,93 +456,33 @@ async function insertSampleData() {
       }
       console.log("✅ Sample cuisines inserted");
     }
-
-    // Check if restaurants table is empty
     const [restaurantCount] = await pool.query(
       "SELECT COUNT(*) as count FROM restaurants",
     );
     if (restaurantCount[0].count === 0) {
       console.log("📝 Inserting sample restaurants...");
-
       const sampleRestaurants = [
-        {
-          name: "Mario's Pizzeria",
-          description: "Authentic Italian pizza made with love",
-          address: "123 Main Street, New York",
-          city: "New York",
-          phone: "555-0101",
-          rating: 4.5,
-          delivery_time: "30-40 minutes",
-          delivery_fee: 2.99,
-          minimum_order: 15.0,
-          is_featured: true,
-        },
-        {
-          name: "Dragon Palace",
-          description: "Traditional Chinese cuisine",
-          address: "456 Chinatown, New York",
-          city: "New York",
-          phone: "555-0102",
-          rating: 4.3,
-          delivery_time: "40-50 minutes",
-          delivery_fee: 3.99,
-          minimum_order: 20.0,
-          is_featured: true,
-        },
-        {
-          name: "Spice Garden",
-          description: "Authentic Indian curries and biryanis",
-          address: "789 Curry Lane, New York",
-          city: "New York",
-          phone: "555-0103",
-          rating: 4.7,
-          delivery_time: "35-45 minutes",
-          delivery_fee: 2.99,
-          minimum_order: 18.0,
-          is_featured: true,
-        },
+        { name: "Mario's Pizzeria", description: "Authentic Italian pizza made with love", address: "123 Main Street, New York", city: "New York", phone: "555-0101", rating: 4.5, delivery_time: "30-40 minutes", delivery_fee: 2.99, minimum_order: 15.0, is_featured: true },
+        { name: "Dragon Palace", description: "Traditional Chinese cuisine", address: "456 Chinatown, New York", city: "New York", phone: "555-0102", rating: 4.3, delivery_time: "40-50 minutes", delivery_fee: 3.99, minimum_order: 20.0, is_featured: true },
+        { name: "Spice Garden", description: "Authentic Indian curries and biryanis", address: "789 Curry Lane, New York", city: "New York", phone: "555-0103", rating: 4.7, delivery_time: "35-45 minutes", delivery_fee: 2.99, minimum_order: 18.0, is_featured: true },
       ];
-
       for (const restaurant of sampleRestaurants) {
         const [result] = await pool.query(
-          `INSERT INTO restaurants 
-           (name, description, address, city, phone, rating, delivery_time, delivery_fee, minimum_order, is_featured)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            restaurant.name,
-            restaurant.description,
-            restaurant.address,
-            restaurant.city,
-            restaurant.phone,
-            restaurant.rating,
-            restaurant.delivery_time,
-            restaurant.delivery_fee,
-            restaurant.minimum_order,
-            restaurant.is_featured,
-          ],
+          `INSERT INTO restaurants (name, description, address, city, phone, rating, delivery_time, delivery_fee, minimum_order, is_featured) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [restaurant.name, restaurant.description, restaurant.address, restaurant.city, restaurant.phone, restaurant.rating, restaurant.delivery_time, restaurant.delivery_fee, restaurant.minimum_order, restaurant.is_featured],
         );
-
-        // Link to cuisines
         const restaurantId = result.insertId;
         let cuisineId;
-
         if (restaurant.name.includes("Pizzeria")) {
-          const [italian] = await pool.query(
-            "SELECT id FROM cuisines WHERE name = 'Italian'",
-          );
+          const [italian] = await pool.query("SELECT id FROM cuisines WHERE name = 'Italian'");
           cuisineId = italian[0]?.id;
         } else if (restaurant.name.includes("Dragon")) {
-          const [chinese] = await pool.query(
-            "SELECT id FROM cuisines WHERE name = 'Chinese'",
-          );
+          const [chinese] = await pool.query("SELECT id FROM cuisines WHERE name = 'Chinese'");
           cuisineId = chinese[0]?.id;
         } else if (restaurant.name.includes("Spice")) {
-          const [indian] = await pool.query(
-            "SELECT id FROM cuisines WHERE name = 'Indian'",
-          );
+          const [indian] = await pool.query("SELECT id FROM cuisines WHERE name = 'Indian'");
           cuisineId = indian[0]?.id;
         }
-
         if (cuisineId) {
           await pool.query(
             "INSERT INTO restaurant_cuisines (restaurant_id, cuisine_id) VALUES (?, ?)",
@@ -603,102 +492,30 @@ async function insertSampleData() {
       }
       console.log("✅ Sample restaurants inserted");
     }
-
-    // Check if deals table is empty
     const [dealCount] = await pool.query("SELECT COUNT(*) as count FROM deals");
     if (dealCount[0].count === 0) {
       console.log("📝 Inserting sample deals...");
-
-      const [italian] = await pool.query(
-        "SELECT id FROM cuisines WHERE name = 'Italian' LIMIT 1",
-      );
-      const [chinese] = await pool.query(
-        "SELECT id FROM cuisines WHERE name = 'Chinese' LIMIT 1",
-      );
-      const [indian] = await pool.query(
-        "SELECT id FROM cuisines WHERE name = 'Indian' LIMIT 1",
-      );
-      const [restaurants] = await pool.query(
-        "SELECT id FROM restaurants LIMIT 3",
-      );
-
+      const [italian] = await pool.query("SELECT id FROM cuisines WHERE name = 'Italian' LIMIT 1");
+      const [chinese] = await pool.query("SELECT id FROM cuisines WHERE name = 'Chinese' LIMIT 1");
+      const [indian] = await pool.query("SELECT id FROM cuisines WHERE name = 'Indian' LIMIT 1");
+      const [restaurants] = await pool.query("SELECT id FROM restaurants LIMIT 3");
       if (restaurants.length >= 3) {
         const sampleDeals = [
-          {
-            title: "2 Large Pizzas Deal",
-            description: "Get 2 large pizzas with 3 toppings each",
-            restaurant_id: restaurants[0].id,
-            cuisine_id: italian[0]?.id,
-            original_price: 29.99,
-            discount_price: 19.99,
-            deal_type: "pizza",
-            has_customization: true,
-            is_featured: true,
-          },
-          {
-            title: "Family Combo Special",
-            description:
-              "Perfect for family dinner with pizza, burger, and fries",
-            restaurant_id: restaurants[1].id,
-            cuisine_id: chinese[0]?.id,
-            original_price: 39.99,
-            discount_price: 29.99,
-            deal_type: "combo",
-            has_customization: true,
-            is_featured: true,
-          },
-          {
-            title: "Spicy Burger Festival",
-            description: "Double patty burger with special sauce",
-            restaurant_id: restaurants[2].id,
-            cuisine_id: indian[0]?.id,
-            original_price: 24.99,
-            discount_price: 16.99,
-            deal_type: "burger",
-            has_customization: true,
-            is_featured: true,
-          },
+          { title: "2 Large Pizzas Deal", description: "Get 2 large pizzas with 3 toppings each", restaurant_id: restaurants[0].id, cuisine_id: italian[0]?.id, original_price: 29.99, discount_price: 19.99, deal_type: "pizza", has_customization: true, is_featured: true },
+          { title: "Family Combo Special", description: "Perfect for family dinner with pizza, burger, and fries", restaurant_id: restaurants[1].id, cuisine_id: chinese[0]?.id, original_price: 39.99, discount_price: 29.99, deal_type: "combo", has_customization: true, is_featured: true },
+          { title: "Spicy Burger Festival", description: "Double patty burger with special sauce", restaurant_id: restaurants[2].id, cuisine_id: indian[0]?.id, original_price: 24.99, discount_price: 16.99, deal_type: "burger", has_customization: true, is_featured: true },
         ];
-
         for (const deal of sampleDeals) {
           const slug = nameToSlug(deal.title);
-          const discountPercent = Math.round(
-            ((deal.original_price - deal.discount_price) /
-              deal.original_price) *
-              100,
-          );
-
-          // Check if cuisine_id column exists
+          const discountPercent = Math.round(((deal.original_price - deal.discount_price) / deal.original_price) * 100);
           let cuisineIdValue = deal.cuisine_id;
           try {
-            const [colExists] = await pool.query(
-              "SHOW COLUMNS FROM deals LIKE 'cuisine_id'",
-            );
-            if (colExists.length === 0) {
-              cuisineIdValue = null;
-            }
-          } catch (error) {
-            cuisineIdValue = null;
-          }
-
+            const [colExists] = await pool.query("SHOW COLUMNS FROM deals LIKE 'cuisine_id'");
+            if (colExists.length === 0) cuisineIdValue = null;
+          } catch { cuisineIdValue = null; }
           await pool.query(
-            `INSERT INTO deals 
-             (title, slug, description, restaurant_id, cuisine_id, original_price, 
-              discount_price, discount_percent, deal_type, has_customization, is_featured)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-              deal.title,
-              slug,
-              deal.description,
-              deal.restaurant_id,
-              cuisineIdValue,
-              deal.original_price,
-              deal.discount_price,
-              discountPercent,
-              deal.deal_type || "other",
-              deal.has_customization || false,
-              deal.is_featured || false,
-            ],
+            `INSERT INTO deals (title, slug, description, restaurant_id, cuisine_id, original_price, discount_price, discount_percent, deal_type, has_customization, is_featured) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [deal.title, slug, deal.description, deal.restaurant_id, cuisineIdValue, deal.original_price, deal.discount_price, discountPercent, deal.deal_type, deal.has_customization, deal.is_featured],
           );
         }
         console.log("✅ Sample deals inserted");
@@ -744,17 +561,9 @@ app.get("/", (req, res) => {
 app.get("/api/health", async (req, res) => {
   try {
     await pool.query("SELECT 1");
-
-    const [cuisineResult] = await pool.query(
-      "SELECT COUNT(*) as count FROM cuisines WHERE is_active = TRUE",
-    );
-    const [restaurantResult] = await pool.query(
-      "SELECT COUNT(*) as count FROM restaurants WHERE is_active = TRUE",
-    );
-    const [dealResult] = await pool.query(
-      "SELECT COUNT(*) as count FROM deals WHERE is_active = TRUE",
-    );
-
+    const [cuisineResult] = await pool.query("SELECT COUNT(*) as count FROM cuisines WHERE is_active = TRUE");
+    const [restaurantResult] = await pool.query("SELECT COUNT(*) as count FROM restaurants WHERE is_active = TRUE");
+    const [dealResult] = await pool.query("SELECT COUNT(*) as count FROM deals WHERE is_active = TRUE");
     res.json({
       status: "healthy",
       timestamp: new Date().toISOString(),
@@ -785,8 +594,6 @@ app.get("/api/health", async (req, res) => {
 /* =========================
    2. CUISINE ENDPOINTS
 ========================= */
-
-// GET all cuisines
 app.get("/api/cuisines", async (req, res) => {
   try {
     const [rows] = await pool.query(`
@@ -801,7 +608,6 @@ app.get("/api/cuisines", async (req, res) => {
       WHERE is_active = TRUE
       ORDER BY name ASC
     `);
-
     const cuisines = rows.map((cuisine) => ({
       id: cuisine.id,
       name: cuisine.name,
@@ -811,122 +617,43 @@ app.get("/api/cuisines", async (req, res) => {
       restaurant_count: cuisine.restaurant_count || 0,
       slug: nameToSlug(cuisine.name),
     }));
-
     res.json(cuisines);
   } catch (error) {
     console.error("❌ /api/cuisines error:", error);
-    res.status(500).json({
-      error: "Failed to fetch cuisines",
-      message: error.message,
-    });
+    res.status(500).json({ error: "Failed to fetch cuisines", message: error.message });
   }
 });
 
-// POST create new cuisine
 app.post("/api/cuisines", async (req, res) => {
   try {
     const { name, description, image, is_featured } = req.body;
-
-    if (!name || name.trim() === "") {
-      return res.status(400).json({
-        error: "Validation error",
-        message: "Cuisine name is required",
-      });
-    }
-
+    if (!name || name.trim() === "") return res.status(400).json({ error: "Validation error", message: "Cuisine name is required" });
     const cuisineName = name.trim();
-
-    const [existing] = await pool.query(
-      "SELECT id FROM cuisines WHERE LOWER(name) = LOWER(?)",
-      [cuisineName],
-    );
-
-    if (existing.length > 0) {
-      return res.status(409).json({
-        error: "Cuisine already exists",
-        message: `A cuisine with name "${cuisineName}" already exists`,
-      });
-    }
-
-    const [result] = await pool.query(
-      `INSERT INTO cuisines (name, description, image, is_featured) 
-       VALUES (?, ?, ?, ?)`,
-      [cuisineName, description || "", image || null, is_featured || false],
-    );
-
-    res.status(201).json({
-      success: true,
-      message: "Cuisine created successfully",
-      data: {
-        id: result.insertId,
-        name: cuisineName,
-        slug: nameToSlug(cuisineName),
-      },
-    });
+    const [existing] = await pool.query("SELECT id FROM cuisines WHERE LOWER(name) = LOWER(?)", [cuisineName]);
+    if (existing.length > 0) return res.status(409).json({ error: "Cuisine already exists", message: `A cuisine with name "${cuisineName}" already exists` });
+    const [result] = await pool.query(`INSERT INTO cuisines (name, description, image, is_featured) VALUES (?, ?, ?, ?)`, [cuisineName, description || "", image || null, is_featured || false]);
+    res.status(201).json({ success: true, message: "Cuisine created successfully", data: { id: result.insertId, name: cuisineName, slug: nameToSlug(cuisineName) } });
   } catch (error) {
     console.error("❌ Error creating cuisine:", error);
-    res.status(500).json({
-      error: "Failed to create cuisine",
-      message: error.message,
-    });
+    res.status(500).json({ error: "Failed to create cuisine", message: error.message });
   }
 });
 
-// GET restaurants by cuisine slug
 app.get("/cuisines/:slug", async (req, res) => {
   const slug = req.params.slug;
-
   try {
     const cuisineName = slugToName(slug);
-
-    const [cuisineRows] = await pool.query(
-      `SELECT 
-        id, 
-        name, 
-        description, 
-        image, 
-        is_featured
-      FROM cuisines 
-      WHERE LOWER(name) = LOWER(?) AND is_active = TRUE`,
-      [cuisineName],
-    );
-
-    if (cuisineRows.length === 0) {
-      return res.status(404).json({
-        error: "Cuisine not found",
-        message: `Cuisine "${slug}" does not exist in our database.`,
-      });
-    }
-
+    const [cuisineRows] = await pool.query(`SELECT id, name, description, image, is_featured FROM cuisines WHERE LOWER(name) = LOWER(?) AND is_active = TRUE`, [cuisineName]);
+    if (cuisineRows.length === 0) return res.status(404).json({ error: "Cuisine not found", message: `Cuisine "${slug}" does not exist in our database.` });
     const cuisine = cuisineRows[0];
-
-    const [restaurantRows] = await pool.query(
-      `SELECT 
-        r.id,
-        r.name,
-        r.image,
-        r.address,
-        r.description,
-        r.rating,
-        r.delivery_time,
-        r.delivery_fee,
-        r.minimum_order
+    const [restaurantRows] = await pool.query(`
+      SELECT r.id, r.name, r.image, r.address, r.description, r.rating, r.delivery_time, r.delivery_fee, r.minimum_order
       FROM restaurants r
       INNER JOIN restaurant_cuisines rc ON r.id = rc.restaurant_id
       WHERE rc.cuisine_id = ? AND r.is_active = TRUE
-      ORDER BY r.name ASC`,
-      [cuisine.id],
-    );
-
-    const [countResult] = await pool.query(
-      `SELECT COUNT(*) as count 
-       FROM restaurant_cuisines 
-       WHERE cuisine_id = ?`,
-      [cuisine.id],
-    );
-
+      ORDER BY r.name ASC`, [cuisine.id]);
+    const [countResult] = await pool.query(`SELECT COUNT(*) as count FROM restaurant_cuisines WHERE cuisine_id = ?`, [cuisine.id]);
     const restaurant_count = countResult[0].count || 0;
-
     const restaurants = restaurantRows.map((restaurant) => ({
       id: restaurant.id,
       name: restaurant.name,
@@ -939,7 +666,6 @@ app.get("/cuisines/:slug", async (req, res) => {
       minimum_order: parseFloat(restaurant.minimum_order) || 0,
       cuisine_name: cuisine.name,
     }));
-
     const response = {
       cuisine: {
         id: cuisine.id,
@@ -953,76 +679,42 @@ app.get("/cuisines/:slug", async (req, res) => {
       restaurants: restaurants,
       count: restaurants.length,
     };
-
     res.json(response);
   } catch (error) {
     console.error(`❌ GET /cuisines/${slug} error:`, error);
-    res.status(500).json({
-      error: "Server error",
-      message: "Failed to fetch cuisine data",
-      details: error.message,
-    });
+    res.status(500).json({ error: "Server error", message: "Failed to fetch cuisine data", details: error.message });
   }
 });
 
 /* =========================
    3. RESTAURANT ENDPOINTS
 ========================= */
-
-// Shared handler for listing restaurants (used by both /restaurants and /api/restaurants)
 const getAllRestaurantsHandler = async (req, res) => {
   try {
-    const {
-      q = "",
-      cuisine = "",
-      _page = 1,
-      _limit = 12,
-      sort = "name",
-      order = "asc",
-    } = req.query;
-
+    const { q = "", cuisine = "", _page = 1, _limit = 12, sort = "name", order = "asc" } = req.query;
     const page = Math.max(1, parseInt(_page) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(_limit) || 12));
     const offset = (page - 1) * limit;
-
     const whereConditions = ["r.is_active = TRUE"];
     const params = [];
-
     if (q && q.trim() !== "") {
       whereConditions.push("(r.name LIKE ? OR r.description LIKE ?)");
       const searchTerm = `%${q.trim()}%`;
       params.push(searchTerm, searchTerm);
     }
-
     if (cuisine && cuisine.trim() !== "") {
-      whereConditions.push(
-        "rc.cuisine_id IN (SELECT id FROM cuisines WHERE LOWER(name) = LOWER(?))",
-      );
+      whereConditions.push("rc.cuisine_id IN (SELECT id FROM cuisines WHERE LOWER(name) = LOWER(?))");
       params.push(cuisine.trim());
     }
-
-    const whereClause =
-      whereConditions.length > 0
-        ? `WHERE ${whereConditions.join(" AND ")}`
-        : "";
-
-    const [countResult] = await pool.query(
-      `SELECT COUNT(DISTINCT r.id) as total
-       FROM restaurants r
-       LEFT JOIN restaurant_cuisines rc ON r.id = rc.restaurant_id
-       ${whereClause}`,
-      params,
-    );
-
+    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(" AND ")}` : "";
+    const [countResult] = await pool.query(`SELECT COUNT(DISTINCT r.id) as total FROM restaurants r LEFT JOIN restaurant_cuisines rc ON r.id = rc.restaurant_id ${whereClause}`, params);
     const total = countResult[0].total || 0;
     const totalPages = Math.ceil(total / limit);
-
     const validSortColumns = ["name", "rating", "delivery_fee", "created_at"];
     const sortColumn = validSortColumns.includes(sort) ? sort : "name";
     const sortOrder = order.toLowerCase() === "desc" ? "DESC" : "ASC";
-
-    const [rows] = await pool.query(
-      `SELECT DISTINCT
+    const [rows] = await pool.query(`
+      SELECT DISTINCT
         r.id,
         r.name,
         r.image,
@@ -1039,10 +731,7 @@ const getAllRestaurantsHandler = async (req, res) => {
        ${whereClause}
        GROUP BY r.id
        ORDER BY r.${sortColumn} ${sortOrder}
-       LIMIT ? OFFSET ?`,
-      [...params, limit, offset],
-    );
-
+       LIMIT ? OFFSET ?`, [...params, limit, offset]);
     const restaurants = rows.map((restaurant) => ({
       id: restaurant.id,
       name: restaurant.name,
@@ -1054,80 +743,36 @@ const getAllRestaurantsHandler = async (req, res) => {
       delivery_fee: parseFloat(restaurant.delivery_fee) || 2.99,
       minimum_order: parseFloat(restaurant.minimum_order) || 0,
       cuisine_names: restaurant.cuisine_names || "",
-      cuisine_ids: restaurant.cuisine_ids
-        ? restaurant.cuisine_ids.split(",").map((id) => parseInt(id))
-        : [],
+      cuisine_ids: restaurant.cuisine_ids ? restaurant.cuisine_ids.split(",").map((id) => parseInt(id)) : [],
     }));
-
     res.setHeader("X-Total-Count", total);
     res.setHeader("X-Total-Pages", totalPages);
     res.setHeader("X-Current-Page", page);
     res.setHeader("X-Per-Page", limit);
-
     res.json(restaurants);
   } catch (error) {
     console.error("❌ /restaurants error:", error);
-    res.status(500).json({
-      error: "Failed to fetch restaurants",
-      message: error.message,
-      details: process.env.NODE_ENV === "development" ? error.sql : undefined,
-    });
+    res.status(500).json({ error: "Failed to fetch restaurants", message: error.message, details: process.env.NODE_ENV === "development" ? error.sql : undefined });
   }
 };
 
-// GET all restaurants (original endpoint)
 app.get("/restaurants", getAllRestaurantsHandler);
-
-// GET all restaurants with /api prefix (for frontend compatibility)
 app.get("/api/restaurants", getAllRestaurantsHandler);
 
-// GET restaurant details by ID
 app.get("/api/restaurants/:id", async (req, res) => {
   try {
     const restaurantId = parseInt(req.params.id);
-
-    if (isNaN(restaurantId) || restaurantId <= 0) {
-      return res.status(400).json({
-        error: "Invalid restaurant ID",
-        message: "Restaurant ID must be a positive number",
-      });
-    }
-
-    const [restaurantRows] = await pool.query(
-      `SELECT r.*, 
-        GROUP_CONCAT(DISTINCT c.name SEPARATOR ', ') as cuisine_names,
-        GROUP_CONCAT(DISTINCT c.id) as cuisine_ids
-       FROM restaurants r
-       LEFT JOIN restaurant_cuisines rc ON r.id = rc.restaurant_id
-       LEFT JOIN cuisines c ON rc.cuisine_id = c.id
-       WHERE r.id = ? AND r.is_active = TRUE
-       GROUP BY r.id`,
-      [restaurantId],
-    );
-
-    if (restaurantRows.length === 0) {
-      return res.status(404).json({
-        error: "Restaurant not found",
-        message: `Restaurant with ID ${restaurantId} does not exist or is inactive`,
-      });
-    }
-
+    if (isNaN(restaurantId) || restaurantId <= 0) return res.status(400).json({ error: "Invalid restaurant ID", message: "Restaurant ID must be a positive number" });
+    const [restaurantRows] = await pool.query(`
+      SELECT r.*, GROUP_CONCAT(DISTINCT c.name SEPARATOR ', ') as cuisine_names, GROUP_CONCAT(DISTINCT c.id) as cuisine_ids
+      FROM restaurants r
+      LEFT JOIN restaurant_cuisines rc ON r.id = rc.restaurant_id
+      LEFT JOIN cuisines c ON rc.cuisine_id = c.id
+      WHERE r.id = ? AND r.is_active = TRUE
+      GROUP BY r.id`, [restaurantId]);
+    if (restaurantRows.length === 0) return res.status(404).json({ error: "Restaurant not found", message: `Restaurant with ID ${restaurantId} does not exist or is inactive` });
     const restaurant = restaurantRows[0];
-
-    const [menuRows] = await pool.query(
-      `SELECT 
-        id,
-        name,
-        description,
-        image,
-        base_price,
-        is_available
-       FROM menu_items 
-       WHERE restaurant_id = ? AND is_available = TRUE
-       ORDER BY name ASC`,
-      [restaurantId],
-    );
-
+    const [menuRows] = await pool.query(`SELECT id, name, description, image, base_price, is_available FROM menu_items WHERE restaurant_id = ? AND is_available = TRUE ORDER BY name ASC`, [restaurantId]);
     const response = {
       id: restaurant.id,
       name: restaurant.name,
@@ -1147,9 +792,7 @@ app.get("/api/restaurants/:id", async (req, res) => {
       is_active: Boolean(restaurant.is_active),
       is_featured: Boolean(restaurant.is_featured),
       cuisine_names: restaurant.cuisine_names || "",
-      cuisine_ids: restaurant.cuisine_ids
-        ? restaurant.cuisine_ids.split(",").map((id) => parseInt(id))
-        : [],
+      cuisine_ids: restaurant.cuisine_ids ? restaurant.cuisine_ids.split(",").map((id) => parseInt(id)) : [],
       menu: menuRows.map((item) => ({
         id: item.id,
         name: item.name,
@@ -1159,163 +802,66 @@ app.get("/api/restaurants/:id", async (req, res) => {
         is_available: Boolean(item.is_available),
       })),
     };
-
     res.json(response);
   } catch (error) {
     console.error("❌ /api/restaurants/:id error:", error);
-    res.status(500).json({
-      error: "Failed to fetch restaurant details",
-      message: error.message,
-    });
+    res.status(500).json({ error: "Failed to fetch restaurant details", message: error.message });
   }
 });
 
-// POST create new restaurant
 app.post("/api/restaurants", async (req, res) => {
   try {
-    const {
-      name,
-      description,
-      address,
-      city,
-      phone,
-      email,
-      website,
-      opening_hours,
-      image,
-      cover_image,
-      rating,
-      delivery_time,
-      minimum_order,
-      delivery_fee,
-      is_featured,
-      cuisine_ids,
-    } = req.body;
-
+    const { name, description, address, city, phone, email, website, opening_hours, image, cover_image, rating, delivery_time, minimum_order, delivery_fee, is_featured, cuisine_ids } = req.body;
     const missingFields = validateRequiredFields(["name", "address"], req.body);
-    if (missingFields.length > 0) {
-      return res.status(400).json({
-        error: "Validation error",
-        message: `Missing required fields: ${missingFields.join(", ")}`,
-      });
-    }
-
-    const [result] = await pool.query(
-      `INSERT INTO restaurants 
-       (name, description, address, city, phone, email, website, opening_hours, 
-        image, cover_image, rating, delivery_time, minimum_order, delivery_fee, is_featured)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        name.trim(),
-        description || "",
-        address || "",
-        city || "",
-        phone || "",
-        email || "",
-        website || "",
-        opening_hours || "",
-        image || null,
-        cover_image || null,
-        parseFloat(rating) || 0.0,
-        delivery_time || "30-45 minutes",
-        parseFloat(minimum_order) || 0.0,
-        parseFloat(delivery_fee) || 2.99,
-        is_featured || false,
-      ],
-    );
-
+    if (missingFields.length > 0) return res.status(400).json({ error: "Validation error", message: `Missing required fields: ${missingFields.join(", ")}` });
+    const [result] = await pool.query(`INSERT INTO restaurants (name, description, address, city, phone, email, website, opening_hours, image, cover_image, rating, delivery_time, minimum_order, delivery_fee, is_featured) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [name.trim(), description || "", address || "", city || "", phone || "", email || "", website || "", opening_hours || "", image || null, cover_image || null, parseFloat(rating) || 0.0, delivery_time || "30-45 minutes", parseFloat(minimum_order) || 0.0, parseFloat(delivery_fee) || 2.99, is_featured || false]);
     const restaurantId = result.insertId;
-
     if (cuisine_ids && Array.isArray(cuisine_ids) && cuisine_ids.length > 0) {
       for (const cuisineId of cuisine_ids) {
-        const [cuisineExists] = await pool.query(
-          "SELECT id FROM cuisines WHERE id = ?",
-          [parseInt(cuisineId)],
-        );
-
-        if (cuisineExists.length > 0) {
-          await pool.query(
-            "INSERT INTO restaurant_cuisines (restaurant_id, cuisine_id) VALUES (?, ?)",
-            [restaurantId, parseInt(cuisineId)],
-          );
-        }
+        const [cuisineExists] = await pool.query("SELECT id FROM cuisines WHERE id = ?", [parseInt(cuisineId)]);
+        if (cuisineExists.length > 0) await pool.query("INSERT INTO restaurant_cuisines (restaurant_id, cuisine_id) VALUES (?, ?)", [restaurantId, parseInt(cuisineId)]);
       }
     }
-
-    res.status(201).json({
-      success: true,
-      message: "Restaurant created successfully",
-      data: {
-        id: restaurantId,
-        name: name.trim(),
-        cuisine_ids: cuisine_ids || [],
-      },
-    });
+    res.status(201).json({ success: true, message: "Restaurant created successfully", data: { id: restaurantId, name: name.trim(), cuisine_ids: cuisine_ids || [] } });
   } catch (error) {
     console.error("❌ Error creating restaurant:", error);
-    res.status(500).json({
-      error: "Failed to create restaurant",
-      message: error.message,
-    });
+    res.status(500).json({ error: "Failed to create restaurant", message: error.message });
   }
 });
 
 /* =========================
-   4. DEAL ENDPOINTS - FIXED VERSION
+   4. DEAL ENDPOINTS
 ========================= */
-
-// GET all active deals (simple version)
 app.get("/deals", async (req, res) => {
   try {
-    // First check if cuisine_id column exists
     let query;
     try {
-      const [columns] = await pool.query(
-        "SHOW COLUMNS FROM deals LIKE 'cuisine_id'",
-      );
+      const [columns] = await pool.query("SHOW COLUMNS FROM deals LIKE 'cuisine_id'");
       if (columns.length > 0) {
         query = `
-          SELECT 
-            d.*,
-            r.name AS restaurant_name,
-            r.image AS restaurant_image,
-            c.name as cuisine_name
+          SELECT d.*, r.name AS restaurant_name, r.image AS restaurant_image, c.name as cuisine_name
           FROM deals d
           LEFT JOIN restaurants r ON d.restaurant_id = r.id AND r.is_active = TRUE
           LEFT JOIN cuisines c ON d.cuisine_id = c.id
-          WHERE d.is_active = TRUE 
-            AND (d.valid_until >= CURDATE() OR d.valid_until IS NULL)
-          ORDER BY d.created_at DESC
-        `;
+          WHERE d.is_active = TRUE AND (d.valid_until >= CURDATE() OR d.valid_until IS NULL)
+          ORDER BY d.created_at DESC`;
       } else {
         query = `
-          SELECT 
-            d.*,
-            r.name AS restaurant_name,
-            r.image AS restaurant_image
+          SELECT d.*, r.name AS restaurant_name, r.image AS restaurant_image
           FROM deals d
           LEFT JOIN restaurants r ON d.restaurant_id = r.id AND r.is_active = TRUE
-          WHERE d.is_active = TRUE 
-            AND (d.valid_until >= CURDATE() OR d.valid_until IS NULL)
-          ORDER BY d.created_at DESC
-        `;
+          WHERE d.is_active = TRUE AND (d.valid_until >= CURDATE() OR d.valid_until IS NULL)
+          ORDER BY d.created_at DESC`;
       }
     } catch (error) {
       query = `
-        SELECT 
-          d.*,
-          r.name AS restaurant_name,
-          r.image AS restaurant_image
+        SELECT d.*, r.name AS restaurant_name, r.image AS restaurant_image
         FROM deals d
         LEFT JOIN restaurants r ON d.restaurant_id = r.id AND r.is_active = TRUE
-        WHERE d.is_active = TRUE 
-          AND (d.valid_until >= CURDATE() OR d.valid_until IS NULL)
-        ORDER BY d.created_at DESC
-      `;
+        WHERE d.is_active = TRUE AND (d.valid_until >= CURDATE() OR d.valid_until IS NULL)
+        ORDER BY d.created_at DESC`;
     }
-
     const [deals] = await pool.query(query);
-
     const formattedDeals = deals.map((deal) => ({
       id: deal.id,
       title: deal.title,
@@ -1341,183 +887,85 @@ app.get("/deals", async (req, res) => {
       created_at: deal.created_at,
       updated_at: deal.updated_at,
     }));
-
     res.json(formattedDeals);
   } catch (error) {
     console.error("❌ /deals error:", error);
-    res.status(500).json({
-      error: "Failed to fetch deals",
-      message: error.message,
-    });
+    res.status(500).json({ error: "Failed to fetch deals", message: error.message });
   }
 });
 
-// GET all deals with filters and pagination - FIXED
 app.get("/api/deals", async (req, res) => {
   try {
-    const {
-      featured,
-      active = "true",
-      restaurant_id,
-      cuisine_id,
-      limit = 20,
-      page = 1,
-      deal_type,
-      has_customization,
-    } = req.query;
-
+    const { featured, active = "true", restaurant_id, cuisine_id, limit = 20, page = 1, deal_type, has_customization } = req.query;
     const whereConditions = ["d.is_active = TRUE"];
     const params = [];
-
     if (featured === "true") whereConditions.push("d.is_featured = TRUE");
-    if (restaurant_id) {
-      whereConditions.push("d.restaurant_id = ?");
-      params.push(parseInt(restaurant_id));
-    }
-
-    // Check if cuisine_id column exists before filtering by it
+    if (restaurant_id) { whereConditions.push("d.restaurant_id = ?"); params.push(parseInt(restaurant_id)); }
     let cuisineIdExists = false;
     try {
-      const [columns] = await pool.query(
-        "SHOW COLUMNS FROM deals LIKE 'cuisine_id'",
-      );
+      const [columns] = await pool.query("SHOW COLUMNS FROM deals LIKE 'cuisine_id'");
       cuisineIdExists = columns.length > 0;
-    } catch (error) {
-      cuisineIdExists = false;
-    }
-
-    if (cuisineIdExists && cuisine_id) {
-      whereConditions.push("d.cuisine_id = ?");
-      params.push(parseInt(cuisine_id));
-    }
-
-    // Check if deal_type column exists
+    } catch { cuisineIdExists = false; }
+    if (cuisineIdExists && cuisine_id) { whereConditions.push("d.cuisine_id = ?"); params.push(parseInt(cuisine_id)); }
     let dealTypeExists = false;
     try {
-      const [columns] = await pool.query(
-        "SHOW COLUMNS FROM deals LIKE 'deal_type'",
-      );
+      const [columns] = await pool.query("SHOW COLUMNS FROM deals LIKE 'deal_type'");
       dealTypeExists = columns.length > 0;
-    } catch (error) {
-      dealTypeExists = false;
-    }
-
-    if (dealTypeExists && deal_type) {
-      whereConditions.push("d.deal_type = ?");
-      params.push(deal_type);
-    }
-
-    // Check if has_customization column exists
+    } catch { dealTypeExists = false; }
+    if (dealTypeExists && deal_type) { whereConditions.push("d.deal_type = ?"); params.push(deal_type); }
     let hasCustomizationExists = false;
     try {
-      const [columns] = await pool.query(
-        "SHOW COLUMNS FROM deals LIKE 'has_customization'",
-      );
+      const [columns] = await pool.query("SHOW COLUMNS FROM deals LIKE 'has_customization'");
       hasCustomizationExists = columns.length > 0;
-    } catch (error) {
-      hasCustomizationExists = false;
-    }
-
-    if (hasCustomizationExists && has_customization === "true") {
-      whereConditions.push("d.has_customization = TRUE");
-    }
-
-    whereConditions.push(
-      "(d.valid_until >= CURDATE() OR d.valid_until IS NULL)",
-    );
-
-    const whereClause =
-      whereConditions.length > 0
-        ? `WHERE ${whereConditions.join(" AND ")}`
-        : "";
-
+    } catch { hasCustomizationExists = false; }
+    if (hasCustomizationExists && has_customization === "true") whereConditions.push("d.has_customization = TRUE");
+    whereConditions.push("(d.valid_until >= CURDATE() OR d.valid_until IS NULL)");
+    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(" AND ")}` : "";
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const take = parseInt(limit);
-
-    const [countResult] = await pool.query(
-      `SELECT COUNT(*) as total FROM deals d ${whereClause}`,
-      params,
-    );
-
+    const [countResult] = await pool.query(`SELECT COUNT(*) as total FROM deals d ${whereClause}`, params);
     const total = countResult[0].total || 0;
-
-    // Build query based on available columns
     let query;
     if (cuisineIdExists) {
       query = `
-        SELECT 
-          d.*,
-          r.name as restaurant_name,
-          r.image as restaurant_image,
-          c.name as cuisine_name
+        SELECT d.*, r.name as restaurant_name, r.image as restaurant_image, c.name as cuisine_name
         FROM deals d
         LEFT JOIN restaurants r ON d.restaurant_id = r.id
         LEFT JOIN cuisines c ON d.cuisine_id = c.id
         ${whereClause}
         ORDER BY d.created_at DESC
-        LIMIT ? OFFSET ?
-      `;
+        LIMIT ? OFFSET ?`;
     } else {
       query = `
-        SELECT 
-          d.*,
-          r.name as restaurant_name,
-          r.image as restaurant_image
+        SELECT d.*, r.name as restaurant_name, r.image as restaurant_image
         FROM deals d
         LEFT JOIN restaurants r ON d.restaurant_id = r.id
         ${whereClause}
         ORDER BY d.created_at DESC
-        LIMIT ? OFFSET ?
-      `;
+        LIMIT ? OFFSET ?`;
     }
-
     const [deals] = await pool.query(query, [...params, take, skip]);
-
     const formattedDeals = deals.map((deal) => {
       let discountPercent = deal.discount_percent;
-      if (!discountPercent && deal.original_price && deal.discount_price) {
-        discountPercent = Math.round(
-          ((deal.original_price - deal.discount_price) / deal.original_price) *
-            100,
-        );
-      }
-
+      if (!discountPercent && deal.original_price && deal.discount_price) discountPercent = Math.round(((deal.original_price - deal.discount_price) / deal.original_price) * 100);
       let detectedDealType = deal.deal_type || "other";
       if (detectedDealType === "other") {
         const title = (deal.title || "").toLowerCase();
-        if (title.includes("pizza") && title.includes("burger")) {
-          detectedDealType = "combo";
-        } else if (title.includes("pizza")) {
-          detectedDealType = "pizza";
-        } else if (title.includes("burger")) {
-          detectedDealType = "burger";
-        } else if (title.includes("combo")) {
-          detectedDealType = "combo";
-        }
+        if (title.includes("pizza") && title.includes("burger")) detectedDealType = "combo";
+        else if (title.includes("pizza")) detectedDealType = "pizza";
+        else if (title.includes("burger")) detectedDealType = "burger";
+        else if (title.includes("combo")) detectedDealType = "combo";
       }
-
       let hasCustomization = deal.has_customization || false;
       if (!hasCustomization) {
         const title = (deal.title || "").toLowerCase();
         const description = (deal.description || "").toLowerCase();
         const tags = (deal.tags || "").toLowerCase();
-
-        const hasPizza =
-          title.includes("pizza") ||
-          description.includes("pizza") ||
-          tags.includes("pizza");
-        const hasBurger =
-          title.includes("burger") ||
-          description.includes("burger") ||
-          tags.includes("burger");
-        const hasCombo =
-          title.includes("combo") ||
-          description.includes("combo") ||
-          tags.includes("combo");
-
+        const hasPizza = title.includes("pizza") || description.includes("pizza") || tags.includes("pizza");
+        const hasBurger = title.includes("burger") || description.includes("burger") || tags.includes("burger");
+        const hasCombo = title.includes("combo") || description.includes("combo") || tags.includes("combo");
         hasCustomization = hasPizza || hasBurger || hasCombo;
       }
-
       return {
         id: deal.id,
         title: deal.title,
@@ -1544,135 +992,64 @@ app.get("/api/deals", async (req, res) => {
         updated_at: deal.updated_at,
       };
     });
-
-    res.json({
-      success: true,
-      data: formattedDeals,
-      pagination: {
-        total,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        pages: Math.ceil(total / parseInt(limit)),
-      },
-    });
+    res.json({ success: true, data: formattedDeals, pagination: { total, page: parseInt(page), limit: parseInt(limit), pages: Math.ceil(total / parseInt(limit)) } });
   } catch (error) {
     console.error("❌ /api/deals error:", error);
-    res.status(500).json({
-      error: "Failed to fetch deals",
-      message: error.message,
-      details: process.env.NODE_ENV === "development" ? error.sql : undefined,
-    });
+    res.status(500).json({ error: "Failed to fetch deals", message: error.message, details: process.env.NODE_ENV === "development" ? error.sql : undefined });
   }
 });
 
-// GET single deal by ID - FIXED
 app.get("/api/deals/:id", async (req, res) => {
   try {
     const dealId = parseInt(req.params.id);
-
-    if (isNaN(dealId) || dealId <= 0) {
-      return res.status(400).json({
-        error: "Invalid deal ID",
-        message: "Deal ID must be a positive number",
-      });
-    }
-
-    // Check if cuisine_id column exists
+    if (isNaN(dealId) || dealId <= 0) return res.status(400).json({ error: "Invalid deal ID", message: "Deal ID must be a positive number" });
     let query;
     try {
-      const [columns] = await pool.query(
-        "SHOW COLUMNS FROM deals LIKE 'cuisine_id'",
-      );
+      const [columns] = await pool.query("SHOW COLUMNS FROM deals LIKE 'cuisine_id'");
       if (columns.length > 0) {
         query = `
-          SELECT 
-            d.*,
-            r.name AS restaurant_name,
-            r.image AS restaurant_image,
-            c.name as cuisine_name
+          SELECT d.*, r.name AS restaurant_name, r.image AS restaurant_image, c.name as cuisine_name
           FROM deals d
           LEFT JOIN restaurants r ON d.restaurant_id = r.id
           LEFT JOIN cuisines c ON d.cuisine_id = c.id
-          WHERE d.id = ? AND d.is_active = TRUE
-        `;
+          WHERE d.id = ? AND d.is_active = TRUE`;
       } else {
         query = `
-          SELECT 
-            d.*,
-            r.name AS restaurant_name,
-            r.image AS restaurant_image
+          SELECT d.*, r.name AS restaurant_name, r.image AS restaurant_image
           FROM deals d
           LEFT JOIN restaurants r ON d.restaurant_id = r.id
-          WHERE d.id = ? AND d.is_active = TRUE
-        `;
+          WHERE d.id = ? AND d.is_active = TRUE`;
       }
     } catch (error) {
       query = `
-        SELECT 
-          d.*,
-          r.name AS restaurant_name,
-          r.image AS restaurant_image
+        SELECT d.*, r.name AS restaurant_name, r.image AS restaurant_image
         FROM deals d
         LEFT JOIN restaurants r ON d.restaurant_id = r.id
-        WHERE d.id = ? AND d.is_active = TRUE
-      `;
+        WHERE d.id = ? AND d.is_active = TRUE`;
     }
-
     const [deals] = await pool.query(query, [dealId]);
-
-    if (deals.length === 0) {
-      return res.status(404).json({
-        error: "Deal not found",
-        message: `Deal with ID ${dealId} does not exist or is inactive`,
-      });
-    }
-
+    if (deals.length === 0) return res.status(404).json({ error: "Deal not found", message: `Deal with ID ${dealId} does not exist or is inactive` });
     const deal = deals[0];
-
     let discountPercent = deal.discount_percent;
-    if (!discountPercent && deal.original_price && deal.discount_price) {
-      discountPercent = Math.round(
-        ((deal.original_price - deal.discount_price) / deal.original_price) *
-          100,
-      );
-    }
-
+    if (!discountPercent && deal.original_price && deal.discount_price) discountPercent = Math.round(((deal.original_price - deal.discount_price) / deal.original_price) * 100);
     let detectedDealType = deal.deal_type || "other";
     if (detectedDealType === "other") {
       const title = (deal.title || "").toLowerCase();
-      if (title.includes("pizza") && title.includes("burger")) {
-        detectedDealType = "combo";
-      } else if (title.includes("pizza")) {
-        detectedDealType = "pizza";
-      } else if (title.includes("burger")) {
-        detectedDealType = "burger";
-      } else if (title.includes("combo")) {
-        detectedDealType = "combo";
-      }
+      if (title.includes("pizza") && title.includes("burger")) detectedDealType = "combo";
+      else if (title.includes("pizza")) detectedDealType = "pizza";
+      else if (title.includes("burger")) detectedDealType = "burger";
+      else if (title.includes("combo")) detectedDealType = "combo";
     }
-
     let hasCustomization = deal.has_customization || false;
     if (!hasCustomization) {
       const title = (deal.title || "").toLowerCase();
       const description = (deal.description || "").toLowerCase();
       const tags = (deal.tags || "").toLowerCase();
-
-      const hasPizza =
-        title.includes("pizza") ||
-        description.includes("pizza") ||
-        tags.includes("pizza");
-      const hasBurger =
-        title.includes("burger") ||
-        description.includes("burger") ||
-        tags.includes("burger");
-      const hasCombo =
-        title.includes("combo") ||
-        description.includes("combo") ||
-        tags.includes("combo");
-
+      const hasPizza = title.includes("pizza") || description.includes("pizza") || tags.includes("pizza");
+      const hasBurger = title.includes("burger") || description.includes("burger") || tags.includes("burger");
+      const hasCombo = title.includes("combo") || description.includes("combo") || tags.includes("combo");
       hasCustomization = hasPizza || hasBurger || hasCombo;
     }
-
     const formattedDeal = {
       id: deal.id,
       title: deal.title,
@@ -1698,211 +1075,81 @@ app.get("/api/deals/:id", async (req, res) => {
       created_at: deal.created_at,
       updated_at: deal.updated_at,
     };
-
-    res.json({
-      success: true,
-      data: formattedDeal,
-    });
+    res.json({ success: true, data: formattedDeal });
   } catch (error) {
     console.error("❌ /api/deals/:id error:", error);
-    res.status(500).json({
-      error: "Failed to fetch deal",
-      message: error.message,
-    });
+    res.status(500).json({ error: "Failed to fetch deal", message: error.message });
   }
 });
 
-// GET deal customization data
 app.get("/api/deals/:id/customization", async (req, res) => {
   try {
     const dealId = parseInt(req.params.id);
-
-    if (isNaN(dealId) || dealId <= 0) {
-      return res.status(400).json({
-        error: "Invalid deal ID",
-        message: "Deal ID must be a positive number",
-      });
-    }
-
-    const [deals] = await pool.query(
-      `SELECT 
-        d.*,
-        r.name AS restaurant_name,
-        r.image AS restaurant_image
-       FROM deals d
-       LEFT JOIN restaurants r ON d.restaurant_id = r.id
-       WHERE d.id = ? AND d.is_active = TRUE`,
-      [dealId],
-    );
-
-    if (deals.length === 0) {
-      return res.status(404).json({
-        error: "Deal not found",
-        message: `Deal with ID ${dealId} does not exist or is inactive`,
-      });
-    }
-
+    if (isNaN(dealId) || dealId <= 0) return res.status(400).json({ error: "Invalid deal ID", message: "Deal ID must be a positive number" });
+    const [deals] = await pool.query(`SELECT d.*, r.name AS restaurant_name, r.image AS restaurant_image FROM deals d LEFT JOIN restaurants r ON d.restaurant_id = r.id WHERE d.id = ? AND d.is_active = TRUE`, [dealId]);
+    if (deals.length === 0) return res.status(404).json({ error: "Deal not found", message: `Deal with ID ${dealId} does not exist or is inactive` });
     const deal = deals[0];
-
     const title = (deal.title || "").toLowerCase();
     const description = (deal.description || "").toLowerCase();
     const tags = (deal.tags || "").toLowerCase();
-
-    const hasPizza =
-      title.includes("pizza") ||
-      description.includes("pizza") ||
-      tags.includes("pizza");
-    const hasBurger =
-      title.includes("burger") ||
-      description.includes("burger") ||
-      tags.includes("burger");
-    const hasCombo =
-      title.includes("combo") ||
-      description.includes("combo") ||
-      tags.includes("combo");
-
+    const hasPizza = title.includes("pizza") || description.includes("pizza") || tags.includes("pizza");
+    const hasBurger = title.includes("burger") || description.includes("burger") || tags.includes("burger");
+    const hasCombo = title.includes("combo") || description.includes("combo") || tags.includes("combo");
     let dealType = deal.deal_type || "other";
     if (dealType === "other") {
-      if (hasPizza && hasBurger) {
-        dealType = "combo";
-      } else if (hasPizza) {
-        dealType = "pizza";
-      } else if (hasBurger) {
-        dealType = "burger";
-      } else if (hasCombo) {
-        dealType = "combo";
-      }
+      if (hasPizza && hasBurger) dealType = "combo";
+      else if (hasPizza) dealType = "pizza";
+      else if (hasBurger) dealType = "burger";
+      else if (hasCombo) dealType = "combo";
     }
-
     let items = [];
-
     if (dealType === "pizza" || (hasPizza && !hasBurger)) {
-      items = [
-        {
-          id: 1,
-          name: deal.title.includes("Pizza") ? deal.title : "Cheese Pizza",
-          description:
-            deal.description ||
-            "Delicious cheese pizza with mozzarella and tomato sauce",
-          base_price: deal.discount_price || 399,
-          crusts: [
-            { id: 1, name: "Regular", price: 0 },
-            { id: 2, name: "Thin Crust", price: 20 },
-            { id: 3, name: "Cheesy Crust", price: 30 },
-          ],
-          toppings: [
-            { id: 1, name: "Extra Cheese", price: 20 },
-            { id: 2, name: "Mushrooms", price: 15 },
-            { id: 3, name: "Olives", price: 10 },
-            { id: 4, name: "Pepperoni", price: 25 },
-          ],
-        },
-      ];
+      items = [{
+        id: 1,
+        name: deal.title.includes("Pizza") ? deal.title : "Cheese Pizza",
+        description: deal.description || "Delicious cheese pizza with mozzarella and tomato sauce",
+        base_price: deal.discount_price || 399,
+        crusts: [{ id: 1, name: "Regular", price: 0 }, { id: 2, name: "Thin Crust", price: 20 }, { id: 3, name: "Cheesy Crust", price: 30 }],
+        toppings: [{ id: 1, name: "Extra Cheese", price: 20 }, { id: 2, name: "Mushrooms", price: 15 }, { id: 3, name: "Olives", price: 10 }, { id: 4, name: "Pepperoni", price: 25 }],
+      }];
     } else if (dealType === "burger" || (hasBurger && !hasPizza)) {
-      items = [
-        {
-          id: 2,
-          name: deal.title.includes("Burger") ? deal.title : "Beef Burger",
-          description:
-            deal.description ||
-            "Juicy beef burger with lettuce, tomato, and special sauce",
-          base_price: deal.discount_price || 249,
-          sizes: [
-            { id: 1, name: "Regular", price: 0 },
-            { id: 2, name: "Large", price: 50 },
-            { id: 3, name: "Jumbo", price: 80 },
-          ],
-          addons: [
-            { id: 1, name: "Extra Patty", price: 50 },
-            { id: 2, name: "Bacon", price: 30 },
-            { id: 3, name: "Cheese Slice", price: 20 },
-            { id: 4, name: "Avocado", price: 25 },
-            { id: 5, name: "Fried Egg", price: 15 },
-          ],
-        },
-      ];
+      items = [{
+        id: 2,
+        name: deal.title.includes("Burger") ? deal.title : "Beef Burger",
+        description: deal.description || "Juicy beef burger with lettuce, tomato, and special sauce",
+        base_price: deal.discount_price || 249,
+        sizes: [{ id: 1, name: "Regular", price: 0 }, { id: 2, name: "Large", price: 50 }, { id: 3, name: "Jumbo", price: 80 }],
+        addons: [{ id: 1, name: "Extra Patty", price: 50 }, { id: 2, name: "Bacon", price: 30 }, { id: 3, name: "Cheese Slice", price: 20 }, { id: 4, name: "Avocado", price: 25 }, { id: 5, name: "Fried Egg", price: 15 }],
+      }];
     } else if (dealType === "combo" || (hasPizza && hasBurger)) {
       const totalPrice = deal.discount_price || 599;
       const pizzaPrice = Math.floor(totalPrice * 0.6);
       const burgerPrice = Math.floor(totalPrice * 0.4);
-
-      items = [
-        {
-          id: 1,
-          name: "Cheese Pizza",
-          description:
-            "Delicious cheese pizza with mozzarella and tomato sauce",
-          base_price: pizzaPrice,
-          crusts: [
-            { id: 1, name: "Regular", price: 0 },
-            { id: 2, name: "Thin Crust", price: 20 },
-            { id: 3, name: "Cheesy Crust", price: 30 },
-          ],
-          toppings: [
-            { id: 1, name: "Extra Cheese", price: 20 },
-            { id: 2, name: "Mushrooms", price: 15 },
-            { id: 3, name: "Olives", price: 10 },
-            { id: 4, name: "Pepperoni", price: 25 },
-          ],
-        },
-        {
-          id: 2,
-          name: "Beef Burger",
-          description:
-            "Juicy beef burger with lettuce, tomato, and special sauce",
-          base_price: burgerPrice,
-          sizes: [
-            { id: 1, name: "Regular", price: 0 },
-            { id: 2, name: "Large", price: 50 },
-            { id: 3, name: "Jumbo", price: 80 },
-          ],
-          addons: [
-            { id: 1, name: "Extra Patty", price: 50 },
-            { id: 2, name: "Bacon", price: 30 },
-            { id: 3, name: "Cheese Slice", price: 20 },
-            { id: 4, name: "Avocado", price: 25 },
-            { id: 5, name: "Fried Egg", price: 15 },
-          ],
-        },
-      ];
+      items = [{
+        id: 1,
+        name: "Cheese Pizza",
+        description: "Delicious cheese pizza with mozzarella and tomato sauce",
+        base_price: pizzaPrice,
+        crusts: [{ id: 1, name: "Regular", price: 0 }, { id: 2, name: "Thin Crust", price: 20 }, { id: 3, name: "Cheesy Crust", price: 30 }],
+        toppings: [{ id: 1, name: "Extra Cheese", price: 20 }, { id: 2, name: "Mushrooms", price: 15 }, { id: 3, name: "Olives", price: 10 }, { id: 4, name: "Pepperoni", price: 25 }],
+      }, {
+        id: 2,
+        name: "Beef Burger",
+        description: "Juicy beef burger with lettuce, tomato, and special sauce",
+        base_price: burgerPrice,
+        sizes: [{ id: 1, name: "Regular", price: 0 }, { id: 2, name: "Large", price: 50 }, { id: 3, name: "Jumbo", price: 80 }],
+        addons: [{ id: 1, name: "Extra Patty", price: 50 }, { id: 2, name: "Bacon", price: 30 }, { id: 3, name: "Cheese Slice", price: 20 }, { id: 4, name: "Avocado", price: 25 }, { id: 5, name: "Fried Egg", price: 15 }],
+      }];
     } else {
-      items = [
-        {
-          id: 3,
-          name: deal.title,
-          description: deal.description || "Special offer",
-          base_price: deal.discount_price || 0,
-        },
-      ];
+      items = [{ id: 3, name: deal.title, description: deal.description || "Special offer", base_price: deal.discount_price || 0 }];
     }
-
-    const response = {
-      success: true,
-      deal: {
-        id: deal.id,
-        title: deal.title,
-        description: deal.description || "",
-        discount_price: parseFloat(deal.discount_price) || 0,
-        original_price: parseFloat(deal.original_price) || 0,
-        restaurant_name: deal.restaurant_name || "Restaurant",
-        restaurant_image: formatImageUrl(deal.restaurant_image),
-        discount_percent: deal.discount_percent || 0,
-      },
-      items: items,
-      deal_type: dealType,
-    };
-
-    res.json(response);
+    res.json({ success: true, deal: { id: deal.id, title: deal.title, description: deal.description || "", discount_price: parseFloat(deal.discount_price) || 0, original_price: parseFloat(deal.original_price) || 0, restaurant_name: deal.restaurant_name || "Restaurant", restaurant_image: formatImageUrl(deal.restaurant_image), discount_percent: deal.discount_percent || 0 }, items: items, deal_type: dealType });
   } catch (error) {
     console.error("❌ /api/deals/:id/customization error:", error);
-    res.status(500).json({
-      error: "Failed to fetch deal customization",
-      message: error.message,
-    });
+    res.status(500).json({ error: "Failed to fetch deal customization", message: error.message });
   }
 });
 
-// POST create new deal - FIXED
 app.post("/api/deals", upload.single("image"), async (req, res) => {
   try {
     const {
@@ -1923,86 +1170,37 @@ app.post("/api/deals", upload.single("image"), async (req, res) => {
       quantity_available,
     } = req.body;
 
-    const missingFields = validateRequiredFields(
-      ["title", "original_price", "restaurant_id"],
-      req.body,
-    );
-    if (missingFields.length > 0) {
-      return res.status(400).json({
-        error: "Validation error",
-        message: `Missing required fields: ${missingFields.join(", ")}`,
-      });
-    }
+    const missingFields = validateRequiredFields(["title", "original_price", "restaurant_id"], req.body);
+    if (missingFields.length > 0) return res.status(400).json({ error: "Validation error", message: `Missing required fields: ${missingFields.join(", ")}` });
 
-    const [restaurantRows] = await pool.query(
-      "SELECT id FROM restaurants WHERE id = ? AND is_active = TRUE",
-      [parseInt(restaurant_id)],
-    );
+    const [restaurantRows] = await pool.query("SELECT id FROM restaurants WHERE id = ? AND is_active = TRUE", [parseInt(restaurant_id)]);
+    if (restaurantRows.length === 0) return res.status(400).json({ error: "Invalid restaurant", message: `Restaurant with ID ${restaurant_id} does not exist or is inactive` });
 
-    if (restaurantRows.length === 0) {
-      return res.status(400).json({
-        error: "Invalid restaurant",
-        message: `Restaurant with ID ${restaurant_id} does not exist or is inactive`,
-      });
-    }
-
-    // Check if cuisine_id column exists
-    let cuisineIdExists = false;
-    try {
-      const [columns] = await pool.query(
-        "SHOW COLUMNS FROM deals LIKE 'cuisine_id'",
-      );
-      cuisineIdExists = columns.length > 0;
-    } catch (error) {
-      cuisineIdExists = false;
-    }
-
-    let finalCuisineId = null;
-    if (cuisineIdExists && cuisine_id) {
-      const [cuisineRows] = await pool.query(
-        "SELECT id FROM cuisines WHERE id = ?",
-        [parseInt(cuisine_id)],
-      );
-
-      if (cuisineRows.length === 0) {
-        return res.status(400).json({
-          error: "Invalid cuisine",
-          message: `Cuisine with ID ${cuisine_id} does not exist`,
-        });
-      }
-      finalCuisineId = parseInt(cuisine_id);
+    // Handle image upload to Cloudinary if a file was sent
+    let imageUrl = null;
+    if (req.file) {
+      const uploadResult = await uploadToCloudinary(req.file.buffer, 'foodieapp');
+      imageUrl = uploadResult.secure_url;
     }
 
     const slug = nameToSlug(title);
-    const image = req.file ? `/uploads/${req.file.filename}` : null;
-
     const validFromMySQL = valid_from ? formatDateForMySQL(valid_from) : null;
-    const validUntilMySQL = valid_until
-      ? formatDateForMySQL(valid_until)
-      : null;
+    const validUntilMySQL = valid_until ? formatDateForMySQL(valid_until) : null;
 
     let finalDiscountPercent = discount_percent || 0;
     const originalPriceNum = parseFloat(original_price);
     const discountPriceNum = parseFloat(discount_price) || 0;
-
     if (discount_price && !discount_percent && originalPriceNum > 0) {
-      finalDiscountPercent = Math.round(
-        ((originalPriceNum - discountPriceNum) / originalPriceNum) * 100,
-      );
+      finalDiscountPercent = Math.round(((originalPriceNum - discountPriceNum) / originalPriceNum) * 100);
     }
 
     let detectedDealType = deal_type || "other";
     if (detectedDealType === "other") {
       const titleLower = (title || "").toLowerCase();
-      if (titleLower.includes("pizza") && titleLower.includes("burger")) {
-        detectedDealType = "combo";
-      } else if (titleLower.includes("pizza")) {
-        detectedDealType = "pizza";
-      } else if (titleLower.includes("burger")) {
-        detectedDealType = "burger";
-      } else if (titleLower.includes("combo")) {
-        detectedDealType = "combo";
-      }
+      if (titleLower.includes("pizza") && titleLower.includes("burger")) detectedDealType = "combo";
+      else if (titleLower.includes("pizza")) detectedDealType = "pizza";
+      else if (titleLower.includes("burger")) detectedDealType = "burger";
+      else if (titleLower.includes("combo")) detectedDealType = "combo";
     }
 
     let detectedHasCustomization = has_customization || false;
@@ -2010,543 +1208,237 @@ app.post("/api/deals", upload.single("image"), async (req, res) => {
       const titleLower = (title || "").toLowerCase();
       const descriptionLower = (description || "").toLowerCase();
       const tagsLower = (tags || "").toLowerCase();
-
-      const hasPizza =
-        titleLower.includes("pizza") ||
-        descriptionLower.includes("pizza") ||
-        tagsLower.includes("pizza");
-      const hasBurger =
-        titleLower.includes("burger") ||
-        descriptionLower.includes("burger") ||
-        tagsLower.includes("burger");
-      const hasCombo =
-        titleLower.includes("combo") ||
-        descriptionLower.includes("combo") ||
-        tagsLower.includes("combo");
-
+      const hasPizza = titleLower.includes("pizza") || descriptionLower.includes("pizza") || tagsLower.includes("pizza");
+      const hasBurger = titleLower.includes("burger") || descriptionLower.includes("burger") || tagsLower.includes("burger");
+      const hasCombo = titleLower.includes("combo") || descriptionLower.includes("combo") || tagsLower.includes("combo");
       detectedHasCustomization = hasPizza || hasBurger || hasCombo;
-    }
-
-    // Build insert query based on available columns
-    let insertQuery;
-    let insertValues;
-
-    if (cuisineIdExists) {
-      insertQuery = `
-        INSERT INTO deals 
-         (title, slug, description, restaurant_id, cuisine_id, image, discount_price, 
-          original_price, discount_percent, valid_from, valid_until, tags, 
-          has_customization, deal_type, is_featured, quantity_available, is_active)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
-      insertValues = [
-        title.trim(),
-        slug,
-        description || "",
-        parseInt(restaurant_id),
-        finalCuisineId,
-        image,
-        discountPriceNum,
-        originalPriceNum,
-        finalDiscountPercent,
-        validFromMySQL,
-        validUntilMySQL,
-        tags || "",
-        detectedHasCustomization,
-        detectedDealType,
-        is_featured === "true" || is_featured === true,
-        quantity_available || null,
-        is_active === "true" || is_active === true,
-      ];
-    } else {
-      insertQuery = `
-        INSERT INTO deals 
-         (title, slug, description, restaurant_id, image, discount_price, 
-          original_price, discount_percent, valid_from, valid_until, tags, 
-          has_customization, deal_type, is_featured, quantity_available, is_active)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
-      insertValues = [
-        title.trim(),
-        slug,
-        description || "",
-        parseInt(restaurant_id),
-        image,
-        discountPriceNum,
-        originalPriceNum,
-        finalDiscountPercent,
-        validFromMySQL,
-        validUntilMySQL,
-        tags || "",
-        detectedHasCustomization,
-        detectedDealType,
-        is_featured === "true" || is_featured === true,
-        quantity_available || null,
-        is_active === "true" || is_active === true,
-      ];
-    }
-
-    const [result] = await pool.query(insertQuery, insertValues);
-
-    // Get created deal
-    const [newDeal] = await pool.query(
-      `SELECT d.*, r.name as restaurant_name, r.image as restaurant_image 
-       FROM deals d 
-       LEFT JOIN restaurants r ON d.restaurant_id = r.id 
-       WHERE d.id = ?`,
-      [result.insertId],
-    );
-
-    const deal = newDeal[0];
-    const formattedDeal = {
-      id: deal.id,
-      title: deal.title,
-      slug: deal.slug,
-      description: deal.description || "",
-      restaurant_id: deal.restaurant_id,
-      restaurant_name: deal.restaurant_name,
-      restaurant_image: formatImageUrl(deal.restaurant_image),
-      cuisine_id: deal.cuisine_id || null,
-      original_price: parseFloat(deal.original_price) || 0,
-      discount_price: parseFloat(deal.discount_price) || 0,
-      discount_percent: parseInt(deal.discount_percent) || 0,
-      image: formatImageUrl(deal.image),
-      is_active: Boolean(deal.is_active),
-      is_featured: Boolean(deal.is_featured),
-      tags: deal.tags || "",
-      valid_from: deal.valid_from,
-      valid_until: deal.valid_until,
-      quantity_available: deal.quantity_available,
-      has_customization: Boolean(deal.has_customization || false),
-      deal_type: deal.deal_type || "other",
-      created_at: deal.created_at,
-      updated_at: deal.updated_at,
-    };
-
-    res.status(201).json({
-      success: true,
-      message: "Deal created successfully",
-      data: formattedDeal,
-    });
-  } catch (error) {
-    console.error("❌ Error creating deal:", error);
-    res.status(500).json({
-      error: "Failed to create deal",
-      message: error.message,
-    });
-  }
-});
-
-// PATCH update deal - FIXED
-app.patch("/api/deals/:id", upload.single("image"), async (req, res) => {
-  try {
-    const dealId = parseInt(req.params.id);
-
-    if (isNaN(dealId) || dealId <= 0) {
-      return res.status(400).json({
-        error: "Invalid deal ID",
-        message: "Deal ID must be a positive number",
-      });
-    }
-
-    const {
-      title,
-      description,
-      restaurant_id,
-      cuisine_id,
-      discount_price,
-      original_price,
-      discount_percent,
-      valid_from,
-      valid_until,
-      tags,
-      has_customization,
-      deal_type,
-      is_active,
-      is_featured,
-      quantity_available,
-    } = req.body;
-
-    const [existingDeal] = await pool.query(
-      "SELECT id FROM deals WHERE id = ?",
-      [dealId],
-    );
-
-    if (existingDeal.length === 0) {
-      return res.status(404).json({
-        error: "Deal not found",
-        message: `Deal with ID ${dealId} does not exist`,
-      });
-    }
-
-    const updates = [];
-    const values = [];
-
-    if (title !== undefined) {
-      updates.push("title = ?");
-      values.push(title.trim());
-      const slug = nameToSlug(title);
-      updates.push("slug = ?");
-      values.push(slug);
-    }
-    if (description !== undefined) {
-      updates.push("description = ?");
-      values.push(description);
-    }
-    if (restaurant_id !== undefined) {
-      const [restaurantRows] = await pool.query(
-        "SELECT id FROM restaurants WHERE id = ?",
-        [parseInt(restaurant_id)],
-      );
-
-      if (restaurantRows.length === 0) {
-        return res.status(400).json({
-          error: "Invalid restaurant",
-          message: `Restaurant with ID ${restaurant_id} does not exist`,
-        });
-      }
-      updates.push("restaurant_id = ?");
-      values.push(parseInt(restaurant_id));
     }
 
     // Check if cuisine_id column exists
     let cuisineIdExists = false;
     try {
-      const [columns] = await pool.query(
-        "SHOW COLUMNS FROM deals LIKE 'cuisine_id'",
-      );
+      const [columns] = await pool.query("SHOW COLUMNS FROM deals LIKE 'cuisine_id'");
       cuisineIdExists = columns.length > 0;
-    } catch (error) {
-      cuisineIdExists = false;
+    } catch { cuisineIdExists = false; }
+    let finalCuisineId = null;
+    if (cuisineIdExists && cuisine_id) {
+      const [cuisineRows] = await pool.query("SELECT id FROM cuisines WHERE id = ?", [parseInt(cuisine_id)]);
+      if (cuisineRows.length === 0) return res.status(400).json({ error: "Invalid cuisine", message: `Cuisine with ID ${cuisine_id} does not exist` });
+      finalCuisineId = parseInt(cuisine_id);
     }
 
-    if (cuisineIdExists && cuisine_id !== undefined) {
-      updates.push("cuisine_id = ?");
-      values.push(cuisine_id ? parseInt(cuisine_id) : null);
+    let insertQuery, insertValues;
+    if (cuisineIdExists) {
+      insertQuery = `
+        INSERT INTO deals 
+          (title, slug, description, restaurant_id, cuisine_id, image, discount_price, 
+           original_price, discount_percent, valid_from, valid_until, tags, 
+           has_customization, deal_type, is_featured, quantity_available, is_active)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+      insertValues = [
+        title.trim(), slug, description || "", parseInt(restaurant_id), finalCuisineId, imageUrl,
+        discountPriceNum, originalPriceNum, finalDiscountPercent, validFromMySQL, validUntilMySQL,
+        tags || "", detectedHasCustomization, detectedDealType,
+        is_featured === "true" || is_featured === true, quantity_available || null,
+        is_active === "true" || is_active === true
+      ];
+    } else {
+      insertQuery = `
+        INSERT INTO deals 
+          (title, slug, description, restaurant_id, image, discount_price, 
+           original_price, discount_percent, valid_from, valid_until, tags, 
+           has_customization, deal_type, is_featured, quantity_available, is_active)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+      insertValues = [
+        title.trim(), slug, description || "", parseInt(restaurant_id), imageUrl,
+        discountPriceNum, originalPriceNum, finalDiscountPercent, validFromMySQL, validUntilMySQL,
+        tags || "", detectedHasCustomization, detectedDealType,
+        is_featured === "true" || is_featured === true, quantity_available || null,
+        is_active === "true" || is_active === true
+      ];
     }
 
-    if (req.file) {
-      const image = `/uploads/${req.file.filename}`;
-      updates.push("image = ?");
-      values.push(image);
-    }
-    if (discount_price !== undefined) {
-      updates.push("discount_price = ?");
-      values.push(parseFloat(discount_price) || 0);
-    }
-    if (original_price !== undefined) {
-      updates.push("original_price = ?");
-      values.push(parseFloat(original_price) || 0);
-    }
-    if (discount_percent !== undefined) {
-      updates.push("discount_percent = ?");
-      values.push(parseInt(discount_percent) || 0);
-    }
-    if (valid_from !== undefined) {
-      updates.push("valid_from = ?");
-      values.push(valid_from ? formatDateForMySQL(valid_from) : null);
-    }
-    if (valid_until !== undefined) {
-      updates.push("valid_until = ?");
-      values.push(valid_until ? formatDateForMySQL(valid_until) : null);
-    }
-    if (tags !== undefined) {
-      updates.push("tags = ?");
-      values.push(tags);
-    }
-    if (has_customization !== undefined) {
-      updates.push("has_customization = ?");
-      values.push(has_customization === "true" || has_customization === true);
-    }
-    if (deal_type !== undefined) {
-      updates.push("deal_type = ?");
-      values.push(deal_type);
-    }
-    if (is_active !== undefined) {
-      updates.push("is_active = ?");
-      values.push(is_active === "true" || is_active === true);
-    }
-    if (is_featured !== undefined) {
-      updates.push("is_featured = ?");
-      values.push(is_featured === "true" || is_featured === true);
-    }
-    if (quantity_available !== undefined) {
-      updates.push("quantity_available = ?");
-      values.push(quantity_available);
-    }
-
-    if (updates.length === 0) {
-      return res.status(400).json({
-        error: "No updates provided",
-        message: "Please provide at least one field to update",
-      });
-    }
-
-    values.push(dealId);
-
-    await pool.query(
-      `UPDATE deals SET ${updates.join(", ")}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-      values,
-    );
-
-    const [updatedDeal] = await pool.query(
+    const [result] = await pool.query(insertQuery, insertValues);
+    const [newDeal] = await pool.query(
       `SELECT d.*, r.name as restaurant_name, r.image as restaurant_image 
-       FROM deals d 
-       LEFT JOIN restaurants r ON d.restaurant_id = r.id 
-       WHERE d.id = ?`,
-      [dealId],
+       FROM deals d LEFT JOIN restaurants r ON d.restaurant_id = r.id WHERE d.id = ?`,
+      [result.insertId]
     );
-
-    const deal = updatedDeal[0];
+    const deal = newDeal[0];
     const formattedDeal = {
-      id: deal.id,
-      title: deal.title,
-      slug: deal.slug,
-      description: deal.description || "",
-      restaurant_id: deal.restaurant_id,
-      restaurant_name: deal.restaurant_name,
-      restaurant_image: formatImageUrl(deal.restaurant_image),
-      cuisine_id: deal.cuisine_id || null,
-      original_price: parseFloat(deal.original_price) || 0,
-      discount_price: parseFloat(deal.discount_price) || 0,
-      discount_percent: parseInt(deal.discount_percent) || 0,
-      image: formatImageUrl(deal.image),
-      is_active: Boolean(deal.is_active),
-      is_featured: Boolean(deal.is_featured),
-      tags: deal.tags || "",
-      valid_from: deal.valid_from,
-      valid_until: deal.valid_until,
-      quantity_available: deal.quantity_available,
-      has_customization: Boolean(deal.has_customization || false),
-      deal_type: deal.deal_type || "other",
-      created_at: deal.created_at,
-      updated_at: deal.updated_at,
+      id: deal.id, title: deal.title, slug: deal.slug, description: deal.description || "",
+      restaurant_id: deal.restaurant_id, restaurant_name: deal.restaurant_name,
+      restaurant_image: formatImageUrl(deal.restaurant_image), cuisine_id: deal.cuisine_id || null,
+      original_price: parseFloat(deal.original_price) || 0, discount_price: parseFloat(deal.discount_price) || 0,
+      discount_percent: parseInt(deal.discount_percent) || 0, image: formatImageUrl(deal.image),
+      is_active: Boolean(deal.is_active), is_featured: Boolean(deal.is_featured), tags: deal.tags || "",
+      valid_from: deal.valid_from, valid_until: deal.valid_until, quantity_available: deal.quantity_available,
+      has_customization: Boolean(deal.has_customization || false), deal_type: deal.deal_type || "other",
+      created_at: deal.created_at, updated_at: deal.updated_at
     };
-
-    res.json({
-      success: true,
-      message: "Deal updated successfully",
-      data: formattedDeal,
-    });
+    res.status(201).json({ success: true, message: "Deal created successfully", data: formattedDeal });
   } catch (error) {
-    console.error("❌ Error updating deal:", error);
-    res.status(500).json({
-      error: "Failed to update deal",
-      message: error.message,
-    });
+    console.error("❌ Error creating deal:", error);
+    res.status(500).json({ error: "Failed to create deal", message: error.message });
   }
 });
 
-// DELETE deal
+app.patch("/api/deals/:id", upload.single("image"), async (req, res) => {
+  try {
+    const dealId = parseInt(req.params.id);
+    if (isNaN(dealId) || dealId <= 0) return res.status(400).json({ error: "Invalid deal ID", message: "Deal ID must be a positive number" });
+
+    const [existingDeal] = await pool.query("SELECT id FROM deals WHERE id = ?", [dealId]);
+    if (existingDeal.length === 0) return res.status(404).json({ error: "Deal not found", message: `Deal with ID ${dealId} does not exist` });
+
+    const {
+      title, description, restaurant_id, cuisine_id, discount_price, original_price,
+      discount_percent, valid_from, valid_until, tags, has_customization, deal_type,
+      is_active, is_featured, quantity_available
+    } = req.body;
+
+    const updates = [];
+    const values = [];
+
+    if (title !== undefined) {
+      updates.push("title = ?"); values.push(title.trim());
+      const slug = nameToSlug(title);
+      updates.push("slug = ?"); values.push(slug);
+    }
+    if (description !== undefined) { updates.push("description = ?"); values.push(description); }
+    if (restaurant_id !== undefined) {
+      const [restaurantRows] = await pool.query("SELECT id FROM restaurants WHERE id = ?", [parseInt(restaurant_id)]);
+      if (restaurantRows.length === 0) return res.status(400).json({ error: "Invalid restaurant", message: `Restaurant with ID ${restaurant_id} does not exist` });
+      updates.push("restaurant_id = ?"); values.push(parseInt(restaurant_id));
+    }
+
+    let cuisineIdExists = false;
+    try {
+      const [columns] = await pool.query("SHOW COLUMNS FROM deals LIKE 'cuisine_id'");
+      cuisineIdExists = columns.length > 0;
+    } catch { cuisineIdExists = false; }
+    if (cuisineIdExists && cuisine_id !== undefined) {
+      updates.push("cuisine_id = ?"); values.push(cuisine_id ? parseInt(cuisine_id) : null);
+    }
+
+    if (req.file) {
+      const uploadResult = await uploadToCloudinary(req.file.buffer, 'foodieapp');
+      const image = uploadResult.secure_url;
+      updates.push("image = ?"); values.push(image);
+    }
+    if (discount_price !== undefined) { updates.push("discount_price = ?"); values.push(parseFloat(discount_price) || 0); }
+    if (original_price !== undefined) { updates.push("original_price = ?"); values.push(parseFloat(original_price) || 0); }
+    if (discount_percent !== undefined) { updates.push("discount_percent = ?"); values.push(parseInt(discount_percent) || 0); }
+    if (valid_from !== undefined) { updates.push("valid_from = ?"); values.push(valid_from ? formatDateForMySQL(valid_from) : null); }
+    if (valid_until !== undefined) { updates.push("valid_until = ?"); values.push(valid_until ? formatDateForMySQL(valid_until) : null); }
+    if (tags !== undefined) { updates.push("tags = ?"); values.push(tags); }
+    if (has_customization !== undefined) { updates.push("has_customization = ?"); values.push(has_customization === "true" || has_customization === true); }
+    if (deal_type !== undefined) { updates.push("deal_type = ?"); values.push(deal_type); }
+    if (is_active !== undefined) { updates.push("is_active = ?"); values.push(is_active === "true" || is_active === true); }
+    if (is_featured !== undefined) { updates.push("is_featured = ?"); values.push(is_featured === "true" || is_featured === true); }
+    if (quantity_available !== undefined) { updates.push("quantity_available = ?"); values.push(quantity_available); }
+
+    if (updates.length === 0) return res.status(400).json({ error: "No updates provided", message: "Please provide at least one field to update" });
+
+    values.push(dealId);
+    await pool.query(`UPDATE deals SET ${updates.join(", ")}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, values);
+
+    const [updatedDeal] = await pool.query(
+      `SELECT d.*, r.name as restaurant_name, r.image as restaurant_image 
+       FROM deals d LEFT JOIN restaurants r ON d.restaurant_id = r.id WHERE d.id = ?`,
+      [dealId]
+    );
+    const deal = updatedDeal[0];
+    const formattedDeal = {
+      id: deal.id, title: deal.title, slug: deal.slug, description: deal.description || "",
+      restaurant_id: deal.restaurant_id, restaurant_name: deal.restaurant_name,
+      restaurant_image: formatImageUrl(deal.restaurant_image), cuisine_id: deal.cuisine_id || null,
+      original_price: parseFloat(deal.original_price) || 0, discount_price: parseFloat(deal.discount_price) || 0,
+      discount_percent: parseInt(deal.discount_percent) || 0, image: formatImageUrl(deal.image),
+      is_active: Boolean(deal.is_active), is_featured: Boolean(deal.is_featured), tags: deal.tags || "",
+      valid_from: deal.valid_from, valid_until: deal.valid_until, quantity_available: deal.quantity_available,
+      has_customization: Boolean(deal.has_customization || false), deal_type: deal.deal_type || "other",
+      created_at: deal.created_at, updated_at: deal.updated_at
+    };
+    res.json({ success: true, message: "Deal updated successfully", data: formattedDeal });
+  } catch (error) {
+    console.error("❌ Error updating deal:", error);
+    res.status(500).json({ error: "Failed to update deal", message: error.message });
+  }
+});
+
 app.delete("/api/deals/:id", async (req, res) => {
   try {
     const dealId = parseInt(req.params.id);
-
-    if (isNaN(dealId) || dealId <= 0) {
-      return res.status(400).json({
-        error: "Invalid deal ID",
-        message: "Deal ID must be a positive number",
-      });
-    }
-
-    const [existingDeal] = await pool.query(
-      "SELECT id FROM deals WHERE id = ?",
-      [dealId],
-    );
-
-    if (existingDeal.length === 0) {
-      return res.status(404).json({
-        error: "Deal not found",
-        message: `Deal with ID ${dealId} does not exist`,
-      });
-    }
-
-    await pool.query(
-      "UPDATE deals SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-      [dealId],
-    );
-
-    res.json({
-      success: true,
-      message: "Deal deleted successfully",
-    });
+    if (isNaN(dealId) || dealId <= 0) return res.status(400).json({ error: "Invalid deal ID", message: "Deal ID must be a positive number" });
+    const [existingDeal] = await pool.query("SELECT id FROM deals WHERE id = ?", [dealId]);
+    if (existingDeal.length === 0) return res.status(404).json({ error: "Deal not found", message: `Deal with ID ${dealId} does not exist` });
+    await pool.query("UPDATE deals SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP WHERE id = ?", [dealId]);
+    res.json({ success: true, message: "Deal deleted successfully" });
   } catch (error) {
     console.error("❌ Error deleting deal:", error);
-    res.status(500).json({
-      error: "Failed to delete deal",
-      message: error.message,
-    });
+    res.status(500).json({ error: "Failed to delete deal", message: error.message });
   }
 });
 
 /* =========================
-   5. UPLOAD ENDPOINTS
+   5. UPLOAD ENDPOINT (simple upload for other use)
 ========================= */
-
-// POST upload image
-app.post("/api/upload", upload.single("image"), (req, res) => {
+app.post("/api/upload", upload.single("image"), async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({
-        error: "No file uploaded",
-        message: "Please select an image file to upload",
-      });
-    }
-
-    const imageUrl = `/uploads/${req.file.filename}`;
-
-    res.json({
-      success: true,
-      message: "File uploaded successfully",
-      data: {
-        imageUrl: formatImageUrl(imageUrl),
-        filePath: imageUrl,
-        filename: req.file.filename,
-        size: req.file.size,
-        mimetype: req.file.mimetype,
-      },
-    });
+    if (!req.file) return res.status(400).json({ error: "No file uploaded", message: "Please select an image file to upload" });
+    const result = await uploadToCloudinary(req.file.buffer, 'foodieapp');
+    const imageUrl = result.secure_url;
+    res.json({ success: true, message: "File uploaded successfully", data: { imageUrl, filename: req.file.originalname, size: req.file.size, mimetype: req.file.mimetype } });
   } catch (error) {
     console.error("❌ Upload error:", error);
-
-    if (error.code === "LIMIT_FILE_SIZE") {
-      return res.status(400).json({
-        error: "File too large",
-        message: "Maximum file size is 5MB",
-      });
-    }
-
-    res.status(500).json({
-      error: "Failed to upload file",
-      message: error.message,
-    });
+    if (error.code === "LIMIT_FILE_SIZE") return res.status(400).json({ error: "File too large", message: "Maximum file size is 5MB" });
+    res.status(500).json({ error: "Failed to upload file", message: error.message });
   }
 });
 
 /* =========================
    6. DEBUG & UTILITY ENDPOINTS
 ========================= */
-
-// GET debug info for database
 app.get("/api/debug/db", async (req, res) => {
   try {
     const [tables] = await pool.query("SHOW TABLES");
     const tableNames = tables.map((t) => Object.values(t)[0]);
-
     const tableInfo = {};
-
     for (const tableName of tableNames) {
       const [columns] = await pool.query(`DESCRIBE ${tableName}`);
-      const [count] = await pool.query(
-        `SELECT COUNT(*) as count FROM ${tableName}`,
-      );
-      tableInfo[tableName] = {
-        columns: columns.map((c) => c.Field),
-        count: count[0].count,
-      };
+      const [count] = await pool.query(`SELECT COUNT(*) as count FROM ${tableName}`);
+      tableInfo[tableName] = { columns: columns.map((c) => c.Field), count: count[0].count };
     }
-
-    res.json({
-      tables: tableNames,
-      tableInfo,
-      database: process.env.DB_NAME || "foodieapp",
-    });
+    res.json({ tables: tableNames, tableInfo, database: process.env.DB_NAME || "foodieapp" });
   } catch (error) {
     console.error("❌ Debug endpoint error:", error);
-    res.status(500).json({
-      error: "Failed to fetch debug data",
-      message: error.message,
-    });
+    res.status(500).json({ error: "Failed to fetch debug data", message: error.message });
   }
 });
 
-// GET API documentation
 app.get("/api/docs", (req, res) => {
   res.json({
     title: "FoodieApp API Documentation",
     version: "1.0.0",
     baseUrl: `http://localhost:${PORT}`,
     endpoints: [
-      {
-        method: "GET",
-        path: "/api/health",
-        description: "Health check endpoint",
-      },
-      {
-        method: "GET",
-        path: "/api/cuisines",
-        description: "Get all cuisines",
-      },
-      {
-        method: "POST",
-        path: "/api/cuisines",
-        description: "Create new cuisine",
-      },
-      {
-        method: "GET",
-        path: "/cuisines/:slug",
-        description: "Get restaurants by cuisine slug",
-      },
-      {
-        method: "GET",
-        path: "/api/restaurants",
-        description: "Get all restaurants with filters",
-      },
-      {
-        method: "POST",
-        path: "/api/restaurants",
-        description: "Create new restaurant",
-      },
-      {
-        method: "GET",
-        path: "/api/restaurants/:id",
-        description: "Get restaurant details with menu",
-      },
-      {
-        method: "GET",
-        path: "/deals",
-        description: "Get all active deals (simple)",
-      },
-      {
-        method: "GET",
-        path: "/api/deals",
-        description: "Get all deals with filters and pagination",
-      },
-      {
-        method: "GET",
-        path: "/api/deals/:id",
-        description: "Get single deal by ID",
-      },
-      {
-        method: "GET",
-        path: "/api/deals/:id/customization",
-        description: "Get deal customization data",
-      },
-      {
-        method: "POST",
-        path: "/api/deals",
-        description: "Create new deal (with image upload)",
-      },
-      {
-        method: "PATCH",
-        path: "/api/deals/:id",
-        description: "Update existing deal (partial update)",
-      },
-      {
-        method: "DELETE",
-        path: "/api/deals/:id",
-        description: "Delete deal",
-      },
-      {
-        method: "POST",
-        path: "/api/upload",
-        description: "Upload image file",
-      },
-      {
-        method: "GET",
-        path: "/api/debug/db",
-        description: "Debug database information",
-      },
+      { method: "GET", path: "/api/health", description: "Health check endpoint" },
+      { method: "GET", path: "/api/cuisines", description: "Get all cuisines" },
+      { method: "POST", path: "/api/cuisines", description: "Create new cuisine" },
+      { method: "GET", path: "/cuisines/:slug", description: "Get restaurants by cuisine slug" },
+      { method: "GET", path: "/api/restaurants", description: "Get all restaurants with filters" },
+      { method: "POST", path: "/api/restaurants", description: "Create new restaurant" },
+      { method: "GET", path: "/api/restaurants/:id", description: "Get restaurant details with menu" },
+      { method: "GET", path: "/deals", description: "Get all active deals (simple)" },
+      { method: "GET", path: "/api/deals", description: "Get all deals with filters and pagination" },
+      { method: "GET", path: "/api/deals/:id", description: "Get single deal by ID" },
+      { method: "GET", path: "/api/deals/:id/customization", description: "Get deal customization data" },
+      { method: "POST", path: "/api/deals", description: "Create new deal (with image upload)" },
+      { method: "PATCH", path: "/api/deals/:id", description: "Update existing deal (partial update)" },
+      { method: "DELETE", path: "/api/deals/:id", description: "Delete deal" },
+      { method: "POST", path: "/api/upload", description: "Upload image file" },
+      { method: "GET", path: "/api/debug/db", description: "Debug database information" },
     ],
   });
 });
@@ -2556,83 +1448,34 @@ app.get("/api/docs", (req, res) => {
 ========================= */
 app.use((error, req, res, next) => {
   console.error("❌ Server error:", error);
-
   if (error instanceof multer.MulterError) {
-    if (error.code === "LIMIT_FILE_SIZE") {
-      return res.status(400).json({
-        error: "File upload error",
-        message: "Maximum file size is 5MB",
-      });
-    }
-    return res.status(400).json({
-      error: "File upload error",
-      message: error.message,
-    });
+    if (error.code === "LIMIT_FILE_SIZE") return res.status(400).json({ error: "File upload error", message: "Maximum file size is 5MB" });
+    return res.status(400).json({ error: "File upload error", message: error.message });
   }
-
-  res.status(500).json({
-    error: "Internal server error",
-    message:
-      process.env.NODE_ENV === "development"
-        ? error.message
-        : "Something went wrong",
-  });
+  res.status(500).json({ error: "Internal server error", message: process.env.NODE_ENV === "development" ? error.message : "Something went wrong" });
 });
 
-// 404 handler
 app.use((req, res) => {
-  res.status(404).json({
-    error: "Endpoint not found",
-    message: `Cannot ${req.method} ${req.originalUrl}`,
-    suggestion: "Check the documentation at /api/docs",
-  });
+  res.status(404).json({ error: "Endpoint not found", message: `Cannot ${req.method} ${req.originalUrl}`, suggestion: "Check the documentation at /api/docs" });
 });
 
 /* =========================
    START SERVER
 ========================= */
-// Export app for Vercel serverless
 export default app;
 
-// Only start the HTTP server when running directly (not in serverless)
 if (!process.env.VERCEL) {
   app.listen(PORT, async () => {
     console.log(`
 ╔══════════════════════════════════════════════════════════╗
 ║                🚀 FOODIEAPP API SERVER                   ║
 ╠══════════════════════════════════════════════════════════╣
-║                                                          ║
 ║  🔗 Base URL: http://localhost:${PORT}                         ║
 ║  📊 Health Check: http://localhost:${PORT}/api/health          ║
 ║  📋 API Docs: http://localhost:${PORT}/api/docs               ║
-║                                                          ║
-║  📋 MAIN ENDPOINTS:                                      ║
-║                                                          ║
-║  • All cuisines:    http://localhost:${PORT}/api/cuisines      ║
-║  • All restaurants: http://localhost:${PORT}/api/restaurants   ║
-║  • All deals:       http://localhost:${PORT}/deals             ║
-║  • Filtered deals:  http://localhost:${PORT}/api/deals         ║
-║  • Create deal:     http://localhost:${PORT}/api/deals         ║
-║  • Upload image:    http://localhost:${PORT}/api/upload        ║
-║                                                          ║
-║  🍽️  CUISINE RESTAURANTS:                                ║
-║                                                          ║
-║  • Format: http://localhost:${PORT}/cuisines/{slug}            ║
-║  • Example: http://localhost:${PORT}/cuisines/italian          ║
-║                                                          ║
-║  🍕 DEAL CUSTOMIZATION:                                  ║
-║                                                          ║
-║  • Format: http://localhost:${PORT}/api/deals/{id}/customization║
-║  • Example: http://localhost:${PORT}/api/deals/1/customization ║
-║                                                          ║
-║  🔧 Debug:          http://localhost:${PORT}/api/debug/db      ║
-║                                                          ║
-╚══════════════════════════════════════════════════════════╝
-  `);
-
+║  📋 All restaurants: http://localhost:${PORT}/api/restaurants   ║
+╚══════════════════════════════════════════════════════════╝`);
     const dbConnected = await testDatabaseConnection();
-    if (!dbConnected) {
-      console.error("⚠️  WARNING: Database connection failed!");
-    }
+    if (!dbConnected) console.error("⚠️  WARNING: Database connection failed!");
   });
 }
