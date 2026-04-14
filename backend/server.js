@@ -6,8 +6,8 @@ import fs from "fs";
 import multer from "multer";
 import { fileURLToPath } from "url";
 import { v2 as cloudinary } from 'cloudinary';
-import { CloudinaryStorage } from 'multer-storage-cloudinary';
-
+import pkg from 'multer-storage-cloudinary';
+const { CloudinaryStorage } = pkg;
 const app = express();
 const PORT = process.env.PORT || 4000;
 
