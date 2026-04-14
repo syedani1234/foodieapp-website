@@ -356,6 +356,19 @@ async function initializeDatabase() {
   }
 }
 
+// Test database connection
+async function testDatabaseConnection() {
+  try {
+    const connection = await pool.getConnection();
+    console.log("✅ Database connection successful");
+    connection.release();
+    return true;
+  } catch (error) {
+    console.error("❌ Database connection failed:", error.message);
+    return false;
+  }
+}
+
 // Function to check and add missing columns
 async function checkAndAddMissingColumns() {
   try {
