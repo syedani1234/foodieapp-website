@@ -28,7 +28,6 @@ export default function RestaurantDetailsPage() {
     return 0;
   }, []);
 
-  // Fetch restaurant details with menu, options, toppings, add-ons
   useEffect(() => {
     setLoading(true);
     axios
@@ -46,8 +45,20 @@ export default function RestaurantDetailsPage() {
   }, [id]);
 
   const handleMenuItemClick = (item) => {
-    setEditingItem(item);
-    setModalItem(item);
+    // Ensure every menu item has restaurant details and a valid price
+    const basePrice = safePrice(item.base_price) || safePrice(item.price);
+    const enrichedItem = {
+      ...item,
+      restaurantId: restaurant.id,
+      restaurantName: restaurant.name,
+      restaurant_id: restaurant.id,
+      restaurant_name: restaurant.name,
+      base_price: basePrice,
+      price: basePrice,
+      isDeal: false,          // explicitly mark as regular item
+    };
+    setEditingItem(enrichedItem);
+    setModalItem(enrichedItem);
   };
 
   if (loading) return <p className="text-center mt-10">Loading...</p>;
@@ -55,7 +66,6 @@ export default function RestaurantDetailsPage() {
   if (!restaurant)
     return <p className="text-center mt-10">Restaurant not found.</p>;
 
-  // Group menu items by category
   const menuByCategory = (restaurant.menu || []).reduce((acc, item) => {
     const cat = item.category_name || "Other";
     if (!acc[cat]) acc[cat] = [];
@@ -63,17 +73,9 @@ export default function RestaurantDetailsPage() {
     return acc;
   }, {});
 
-  // Helper function to get base price
   const getBasePrice = (item) => {
-    // Try base_price first
     const basePrice = safePrice(item.base_price);
-
-    // If no base_price, try regular price
-    if (basePrice === 0) {
-      return safePrice(item.price);
-    }
-
-    return basePrice;
+    return basePrice === 0 ? safePrice(item.price) : basePrice;
   };
 
   return (
@@ -180,7 +182,6 @@ export default function RestaurantDetailsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {items.map((item) => {
                   const basePrice = getBasePrice(item);
-
                   return (
                     <div
                       key={item.id}
@@ -189,7 +190,6 @@ export default function RestaurantDetailsPage() {
                     >
                       <div className="p-5">
                         <div className="flex gap-4">
-                          {/* Item Image */}
                           {item.image && (
                             <div className="w-24 h-24 flex-shrink-0">
                               <img
@@ -199,8 +199,6 @@ export default function RestaurantDetailsPage() {
                               />
                             </div>
                           )}
-
-                          {/* Item Details */}
                           <div className="flex-1 min-w-0">
                             <div className="flex justify-between items-start mb-2">
                               <h4 className="text-lg font-bold text-gray-800 truncate">
@@ -217,7 +215,6 @@ export default function RestaurantDetailsPage() {
                               </p>
                             )}
 
-                            {/* Show available options if any */}
                             {(item.addOns?.length > 0 ||
                               item.toppings?.length > 0 ||
                               item.variations?.length > 0) && (
@@ -240,7 +237,6 @@ export default function RestaurantDetailsPage() {
                               </div>
                             )}
 
-                            {/* Action Buttons */}
                             <div className="flex items-center justify-between">
                               <button
                                 onClick={(e) => {
@@ -258,9 +254,7 @@ export default function RestaurantDetailsPage() {
                                     : "bg-red-50 text-red-600 hover:bg-red-100"
                                 }`}
                               >
-                                <span>
-                                  {isFavorite(item.id) ? "❤️" : "🤍"}
-                                </span>
+                                <span>{isFavorite(item.id) ? "❤️" : "🤍"}</span>
                                 <span>
                                   {isFavorite(item.id) ? "Added" : "Favorite"}
                                 </span>
@@ -294,7 +288,6 @@ export default function RestaurantDetailsPage() {
         )}
       </div>
 
-      {/* Back Button */}
       <div className="mt-8 text-center">
         <button
           onClick={() => navigate("/restaurants")}
@@ -305,7 +298,6 @@ export default function RestaurantDetailsPage() {
         </button>
       </div>
 
-      {/* Menu Modal */}
       {modalItem && (
         <MenuModal
           item={modalItem}
